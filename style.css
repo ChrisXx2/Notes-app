@@ -1,0 +1,25 @@
+body {
+    overflow-x: hidden;
+}
+
+#board {
+    left: 0px;
+
+    border: 5px solid black;
+    width: 100%;
+    height: 50vh;
+    
+    display: flex;
+}
+
+.note {
+    border: 2px solid rgb(255, 174, 0);
+
+    width: 10vh;
+    height: 25vh;
+}
+
+.text-zone {
+
+    border: 0.1 solid black;
+}
