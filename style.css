@@ -4,6 +4,8 @@ body {
 
 #board {
     left: 0px;
+    position: relative;
+    overflow: hidden;
 
     border: 5px solid black;
     margin-top: 20px;

@@ -37,13 +37,31 @@ function makeDraggable(x) {
     });
 }
 
-// Track mouse movement globally
 document.addEventListener("mousemove", (e) => {
     if (isDragging && draggedElement) {
-        draggedElement.style.left = (e.clientX - offsetX) + "px";
-        draggedElement.style.top = (e.clientY - offsetY) + "px";
+        const boardRect = board.getBoundingClientRect()
+        const elemRect = draggedElement.getBoundingClientRect();
+        // Calculate new position
+        let newLeft = e.clientX - offsetX;
+        let newTop = e.clientY - offsetY;
+
+        // Restrict horizontally
+        if (newLeft < 0) newLeft = 0;
+        if (newLeft + elemRect.width > boardRect.width) {
+            newLeft = boardRect.width - elemRect.width;
+        }
+
+        // Restrict vertically
+        if (newTop < 0) newTop = 0;
+        if (newTop + elemRect.height > boardRect.height) {
+            newTop = boardRect.height - elemRect.height;
+        }
+
+        draggedElement.style.left = newLeft + "px";
+        draggedElement.style.top = newTop + "px";
     }
 });
+
 
 // Stop dragging when mouse released
 document.addEventListener("mouseup", () => {
