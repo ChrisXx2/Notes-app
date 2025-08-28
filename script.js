@@ -46,7 +46,7 @@ addCheckList.addEventListener('click', () => {
         const item = document.createElement('div')
         const addInput = document.createElement('input');
         addInput.className = "list-item-input";
-        addInput.textContent = "New item";
+        addInput.value = "New item";
         createDeleteButton(item, item);
 
         item.appendChild(addInput)
