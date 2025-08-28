@@ -16,12 +16,16 @@ function createDeleteButton(x) {
     x.appendChild(deleteButton);
 };
 
-// 🔹 Make any element draggable
+//  Make any element draggable
 function makeDraggable(x) {
-    x.style.position = "absolute"; // Important: allows free movement
     x.style.cursor = "grab";       // Show grab cursor
 
     x.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") {
+            return;
+        }
+        x.style.position = "absolute"; // Important: allows free movement
+        document.body.style.userSelect = "none";
         isDragging = true;
         draggedElement = x;
 
@@ -46,6 +50,8 @@ document.addEventListener("mouseup", () => {
     if (draggedElement) {
         draggedElement.style.cursor = "grab";
     }
+    draggedElement.position = "relative";
+    document.body.style.userSelect = "auto";
     isDragging = false;
     draggedElement = null;
 });
