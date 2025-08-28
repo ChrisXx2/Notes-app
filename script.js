@@ -1,24 +1,62 @@
 const board = document.getElementById("board");       // Select the board container element
-const addButton = document.getElementById("add-note"); // Select the "Add Note" button
-const addCheckList = document.getElementById("add-checklist")
+const addNoteButton = document.getElementById("add-note"); // Select the "Add Note" button
+const addCheckListButton = document.getElementById("add-checklist");
 
-function createDeleteButton(x, y) {
+let isDragging = false;   // If dragging is active or not
+let draggedElement = null; // Which element is being dragged
+let offsetX, offsetY;     // Mouse offset inside the element
+
+function createDeleteButton(x) {
     const deleteButton = document.createElement('button');
     deleteButton.className = 'deleteButton';     // Assign class for styling
     deleteButton.textContent = "x";              // Set button text to "x"
     deleteButton.onclick = () => {
         x.remove();                           // Remove the note when delete button is clicked
     };
-    y.appendChild(deleteButton);
+    x.appendChild(deleteButton);
 };
 
+// 🔹 Make any element draggable
+function makeDraggable(x) {
+    x.style.position = "absolute"; // Important: allows free movement
+    x.style.cursor = "grab";       // Show grab cursor
+
+    x.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        draggedElement = x;
+
+        // Calculate offset between mouse and element corner
+        offsetX = e.clientX - x.offsetLeft;
+        offsetY = e.clientY - x.offsetTop;
+
+        x.style.cursor = "grabbing";
+    });
+}
+
+// Track mouse movement globally
+document.addEventListener("mousemove", (e) => {
+    if (isDragging && draggedElement) {
+        draggedElement.style.left = (e.clientX - offsetX) + "px";
+        draggedElement.style.top = (e.clientY - offsetY) + "px";
+    }
+});
+
+// Stop dragging when mouse released
+document.addEventListener("mouseup", () => {
+    if (draggedElement) {
+        draggedElement.style.cursor = "grab";
+    }
+    isDragging = false;
+    draggedElement = null;
+});
+
 // Add a click event listener to the "Add Note" button
-addButton.addEventListener('click', () => {
+addNoteButton.addEventListener('click', () => {
     const note = document.createElement('div');  // Create a new div for the note
     note.className = 'note';                     // Assign the 'note' class for styling
     note.textContent = "New Note";               // Set initial content (will later change to input)
 
-    createDeleteButton(note, note);
+    createDeleteButton(note);
 
     // Create a textarea for note content
     const textZone = document.createElement('textarea');
@@ -28,32 +66,38 @@ addButton.addEventListener('click', () => {
     note.appendChild(textZone);
 
     // Add the note to the board
+    makeDraggable(note);
     board.appendChild(note);                     
 });
 
-addCheckList.addEventListener('click', () => {
-    const checkList = document.createElement('div')
+addCheckListButton.addEventListener('click', () => {
+    const checkList = document.createElement('div');
     checkList.className = "note";
     checkList.textContent = "new list";
 
-    createDeleteButton(checkList, checkList);
+    createDeleteButton(checkList);
 
-    const addItem = document.createElement('button')
-    addItem.className = "add-item-button"
+    const addItem = document.createElement('button');
+    addItem.className = "add-item-button";
     addItem.textContent = "Add item";
 
     addItem.addEventListener('click', () => {
-        const item = document.createElement('div')
+        const item = document.createElement('div');
+        const addCheckBox = document.createElement('input');
+        addCheckBox.className = "list-item-checkbox";
+        addCheckBox.type = 'checkbox'
         const addInput = document.createElement('input');
         addInput.className = "list-item-input";
         addInput.value = "New item";
-        createDeleteButton(item, item);
+        createDeleteButton(item);
 
+        item.appendChild(addCheckBox)
         item.appendChild(addInput)
         checkList.appendChild(item)
     })
 
     checkList.appendChild(addItem)
+    makeDraggable(checkList);
     board.appendChild(checkList);
     
 });
