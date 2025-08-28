@@ -28,6 +28,12 @@ body {
     display: flex;
     flex-direction: column;
 
+    user-select: none;   
+    cursor: grab;        
+}
+
+.note:active {
+  cursor: grabbing;    /* Change cursor while dragging */
 }
 
 .text-zone {
