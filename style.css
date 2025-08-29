@@ -109,7 +109,7 @@
     padding: 0;
 }
 
-.note-list .deleteButton {
+.itemDeleteButton {
     border: none;
     background: #ff4d4d;
     color: white;

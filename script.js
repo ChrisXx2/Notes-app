@@ -18,6 +18,16 @@ function createDeleteButton(x) {
     x.appendChild(deleteButton);
 };
 
+function createItemDeleteButton(x) {
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'itemDeleteButton';     // Assign class for styling
+    deleteButton.textContent = "x";              // Set button text to "x"
+    deleteButton.onclick = () => {
+        x.remove();                           // Remove the note when delete button is clicked
+    };
+    x.appendChild(deleteButton);
+};
+
 //  Make any element draggable
 function makeDraggable(x) {
     x.style.cursor = "grab";       // Show grab cursor
@@ -134,7 +144,7 @@ addCheckListButton.addEventListener('click', () => {
         const addInput = document.createElement('input');
         addInput.className = "list-item-input";
         addInput.value = "New item";
-        createDeleteButton(item);
+        createItemDeleteButton(item);
 
         item.appendChild(addCheckBox)
         item.appendChild(addInput)
