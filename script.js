@@ -1,10 +1,12 @@
 const board = document.getElementById("board");       // Select the board container element
 const addNoteButton = document.getElementById("add-note"); // Select the "Add Note" button
 const addCheckListButton = document.getElementById("add-checklist");
+const snappyButton = document.getElementById("toggle-snap");
 
 let isDragging = false;   // If dragging is active or not
 let draggedElement = null; // Which element is being dragged
 let offsetX, offsetY;     // Mouse offset inside the element
+let isSnappy = true;
 
 function createDeleteButton(x) {
     const deleteButton = document.createElement('button');
@@ -67,6 +69,14 @@ document.addEventListener("mousemove", (e) => {
 document.addEventListener("mouseup", () => {
     if (draggedElement) {
         draggedElement.style.cursor = "grab";
+    };
+    if (isSnappy == true) {
+        // Snap to board
+        const gridSize = 50;
+        newLeft = Math.round((newLeft - boardRect.left) / gridSize) * gridSize;
+        newTop  = Math.round((newTop - boardRect.top) / gridSize) * gridSize;
+        draggedElement.style.left = newLeft + "px";
+        draggedElement.style.top = newTop + "px";
     }
     draggedElement.position = "relative";
     document.body.style.userSelect = "auto";
@@ -75,6 +85,15 @@ document.addEventListener("mouseup", () => {
 });
 
 // Add a click event listener to the "Add Note" button
+
+snappyButton.addEventListener('click', () => {
+    if (isSnappy && isSnappy == true) {
+        isSnappy = false;
+    } else {
+        isSnappy = true;
+    }
+})
+
 addNoteButton.addEventListener('click', () => {
     const note = document.createElement('div');  // Create a new div for the note
     note.className = 'note';                     // Assign the 'note' class for styling
@@ -96,7 +115,7 @@ addNoteButton.addEventListener('click', () => {
 
 addCheckListButton.addEventListener('click', () => {
     const checkList = document.createElement('div');
-    checkList.className = "note";
+    checkList.className = "note-list";
     checkList.textContent = "new list";
 
     createDeleteButton(checkList);

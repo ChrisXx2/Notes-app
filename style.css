@@ -1,58 +1,128 @@
-body {
-    overflow-x: hidden;
-}
-
+/* Board container */
 #board {
-    left: 0px;
     position: relative;
+    width: 90%;
+    height: 80vh;
+    margin: 20px auto;
+    padding: 10px;
+    background: #f4f4f9;
+    border: 2px solid #ccc;
+    border-radius: 10px;
     overflow: hidden;
-
-    border: 5px solid black;
-    margin-top: 20px;
-    width: 100%;
-    height: 50vh;
-    
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-
 }
 
 .note {
-    background: #fffbe6;
-    box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 10px;
     width: 200px;
-
-    display: flex;
-    flex-direction: column;
-
-    user-select: none;   
-    cursor: grab;        
+    min-height: 120px;
+    padding: 10px;
+    margin: 10px;
+    background: #fffbe6;
+    border: 1px solid #e1c97f;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    cursor: grab;
+    position: relative;   /* default, will become absolute while dragging */
+    transition: box-shadow 0.2s;
 }
 
+.note-list {
+    width: 200px;
+    min-height: 120px;
+    padding: 10px;
+    margin: 10px;
+    background: #fffbe6;
+    border: 1px solid #e1c97f;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    cursor: grab;
+    position: relative;   /* default, will become absolute while dragging */
+    transition: box-shadow 0.2s;
+}
+
+/* When dragging */
 .note:active {
-  cursor: grabbing;    /* Change cursor while dragging */
+    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+    z-index: 1000;/* gotta be high cause it need to be above all the other stuff*/
 }
 
 .text-zone {
-
     width: 100%;
-    height: 100%;
+    height: 70px;
     border: none;
-    background: none;
     resize: none;
+    padding: 5px;
+    border-radius: 5px;
     outline: none;
+    font-size: 14px;
+    background: #fff;
 }
 
 .list-item-input {
-
-    width: 80%;
-    border: 1px solid black;
-    background: none;
-    resize: none;
+    border: none;
+    padding: 5px;
+    font-size: 14px;
+    border-bottom: 1px solid #ddd;
     outline: none;
+    width: calc(100% - 30px);
+    background: transparent;
+}
+
+.note div {
+    display: flex;
+    align-items: center;
+    margin-top: 5px;
+}
+
+.list-item-checkbox {
+    margin-right: 5px;
+}
+
+.add-item-button {
+    margin-top: 8px;
+    padding: 5px 10px;
+    border: none;
+    background: #4CAF50;
+    color: white;
+    font-size: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.add-item-button:hover {
+    background: #45a049;
+}
+
+.deleteButton {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    border: none;
+    background: #ff4d4d;
+    color: white;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    line-height: 18px;
+    text-align: center;
+    padding: 0;
+}
+
+.note-list .deleteButton {
+    border: none;
+    background: #ff4d4d;
+    color: white;
+    font-weight: bold;
+    border-radius: 40%;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    line-height: 18px;
+    text-align: center;
+    padding: 0;
+}
+
+.deleteButton:hover {
+    background: #e60000;
 }
