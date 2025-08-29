@@ -58,16 +58,9 @@ document.addEventListener("mousemove", (e) => {
         if (newTop + elemRect.height > boardRect.height) {
             newTop = boardRect.height - elemRect.height;
         }
-
-    if (isSnappy == true) {
-        // Snap to board
-        const gridSize = 50;
-        newLeft = Math.round((newLeft - boardRect.left) / gridSize) * gridSize;
-        newTop  = Math.round((newTop - boardRect.top) / gridSize) * gridSize;
-
-    }
         draggedElement.style.left = newLeft + "px";
         draggedElement.style.top = newTop + "px";
+
     }
 });
 
@@ -76,11 +69,20 @@ document.addEventListener("mousemove", (e) => {
 document.addEventListener("mouseup", () => {
     if (draggedElement) {
         draggedElement.style.cursor = "grab";
+
+
     };
 
     draggedElement.position = "relative";
     document.body.style.userSelect = "auto";
     isDragging = false;
+    if (isSnappy == true) {
+        // Snap to board
+        const gridSize = 150;
+        draggedElement.style.left = (Math.round((newLeft - boardRect.left) / gridSize) * gridSize) + "px";
+        draggedElement.style.top  = (Math.round((newTop - boardRect.top) / gridSize) * gridSize) + "px";
+
+    }
     draggedElement = null;
 });
 
