@@ -3,12 +3,13 @@ const addNoteButton = document.getElementById("add-note"); // Select the "Add No
 const addCheckListButton = document.getElementById("add-checklist");
 const snappyButton = document.getElementById("toggle-snap");
 
+let allowDrag = true; // important for later
 let isDragging = false;   // If dragging is active or not
 let draggedElement = null; // Which element *is* being dragged
 let dadDraggedElement = null; //Which element *was* being dragged
 let grandDadDraggedElement = null; //Old ahh
 let offsetX, offsetY;     // Mouse offset inside the element
-let isSnappy = true;
+let snappyMode = 1;
 
 
 function createDeleteButton(x) {
@@ -36,7 +37,7 @@ function makeDraggable(x) {
     x.style.cursor = "grab";       // Show grab cursor
 
     x.addEventListener('mousedown', (e) => {
-        if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") {
+        if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDrag == true) {
             return;
         }
         x.style.position = "absolute"; // Important: allows free movement
@@ -82,7 +83,7 @@ document.addEventListener("mousemove", (e) => {
             newTop = boardRect.height - elemRect.height;
         }
 
-        if (isSnappy == true) {
+        if (snappyMode == 2) {
         //calculate the grid size using offsetHeight and offsetWidth
         const gridSizeHeight = board.offsetHeight / 40;
         //const gridSizeHeight = (Math.round((board.offsetHeight / 100) * 100) / 20);
@@ -104,23 +105,27 @@ document.addEventListener("mousemove", (e) => {
 document.addEventListener("mouseup", () => {
     if (draggedElement) {
         draggedElement.style.cursor = "grab";
-        draggedElement.style.position = "absolute";
+//        draggedElement.style.position = "absolute";
     };
 
     document.body.style.userSelect = "auto";
     isDragging = false;
+    draggedElement = null;
 
 });
 
 // Add a click event listener to the "Add Note" button
 
 snappyButton.addEventListener('click', () => {
-    if (isSnappy == true) {
-        isSnappy = false;
-        snappyButton.textContent = "Mode: Free drag"
-    } else {
-        isSnappy = true;
-        snappyButton.textContent = "Mode: Snaps to grid"
+    if (snappyMode == 3) {
+        snappyMode = 1;
+        snappyButton.textContent = "Drag mode: free drag, no snap";
+    } else if (snappyMode == 1) {
+        snappyMode = 2;
+        snappyButton.textContent = "Drag mode: drags across the grid";
+    } else  if (snappyMode == 2) {
+        snappyMode = 3;
+        snappyButton.textContent = "Drag mode: free drag, Snaps to grid on release";
     }
 })
 
