@@ -8,6 +8,7 @@ let draggedElement = null; // Which element is being dragged
 let offsetX, offsetY;     // Mouse offset inside the element
 let isSnappy = true;
 
+
 function createDeleteButton(x) {
     const deleteButton = document.createElement('button');
     deleteButton.className = 'deleteButton';     // Assign class for styling
@@ -68,8 +69,20 @@ document.addEventListener("mousemove", (e) => {
         if (newTop + elemRect.height > boardRect.height) {
             newTop = boardRect.height - elemRect.height;
         }
+
+        if (isSnappy == true) {
+        //calculate the grid size using offsetHeight and offsetWidth
+        const gridSizeHeight = board.offsetHeight / 10;
+        //const gridSizeHeight = (Math.round((board.offsetHeight / 100) * 100) / 20);
+        const gridSizeWidth = (Math.round((board.offsetWidth / 100) * 100) / 20);
+        // Snap to board
+        
+        draggedElement.style.left = (Math.round((newLeft - boardRect.left) / gridSizeWidth) * gridSizeWidth) + "px";
+        draggedElement.style.top  = (Math.round((newTop - boardRect.top) / gridSizeHeight) * gridSizeHeight) + "px";
+    } else {
         draggedElement.style.left = newLeft + "px";
         draggedElement.style.top = newTop + "px";
+    }
 
     }
 });
@@ -83,16 +96,12 @@ document.addEventListener("mouseup", () => {
 
     };
 
-    draggedElement.position = "relative";
+    if (draggedElement) {
+        draggedElement.style.position = "absolute";
+    }
     document.body.style.userSelect = "auto";
     isDragging = false;
-    if (isSnappy == true) {
-        // Snap to board
-        const gridSize = 150;
-        draggedElement.style.left = (Math.round((newLeft - boardRect.left) / gridSize) * gridSize) + "px";
-        draggedElement.style.top  = (Math.round((newTop - boardRect.top) / gridSize) * gridSize) + "px";
 
-    }
     draggedElement = null;
 });
 
