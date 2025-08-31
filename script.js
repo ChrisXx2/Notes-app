@@ -103,10 +103,33 @@ document.addEventListener("mousemove", (e) => {
 
 // Stop dragging when mouse released
 document.addEventListener("mouseup", () => {
-    if (draggedElement) {
+    if (draggedElement && snappyMode == 3) {
+        const gridSize = 50; // px per cell
+        const boardRect = board.getBoundingClientRect();
+
+        // Current absolute position
+        let absLeft = parseInt(draggedElement.style.left, 10);
+        let absTop  = parseInt(draggedElement.style.top, 10);
+
+        // Position relative to the board
+        let relLeft = absLeft - boardRect.left;
+        let relTop  = absTop - boardRect.top;
+
+        // Snap relative coordinates
+        relLeft = Math.round(relLeft / gridSize) * gridSize;
+        relTop  = Math.round(relTop / gridSize) * gridSize;
+
+        // Clamp so it doesn’t escape the board
+        relLeft = Math.max(0, Math.min(relLeft, boardRect.width - draggedElement.offsetWidth));
+        relTop  = Math.max(0, Math.min(relTop, boardRect.height - draggedElement.offsetHeight));
+
+        // Apply back in absolute terms
+        draggedElement.style.left = (boardRect.left + relLeft) + "px";
+        draggedElement.style.top  = (boardRect.top + relTop) + "px";
+
         draggedElement.style.cursor = "grab";
 //        draggedElement.style.position = "absolute";
-    };
+    }
 
     document.body.style.userSelect = "auto";
     isDragging = false;
