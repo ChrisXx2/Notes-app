@@ -4,7 +4,9 @@ const addCheckListButton = document.getElementById("add-checklist");
 const snappyButton = document.getElementById("toggle-snap");
 
 let isDragging = false;   // If dragging is active or not
-let draggedElement = null; // Which element is being dragged
+let draggedElement = null; // Which element *is* being dragged
+let dadDraggedElement = null; //Which element *was* being dragged
+let grandDadDraggedElement = null; //Old ahh
 let offsetX, offsetY;     // Mouse offset inside the element
 let isSnappy = true;
 
@@ -38,9 +40,19 @@ function makeDraggable(x) {
             return;
         }
         x.style.position = "absolute"; // Important: allows free movement
+ 
         document.body.style.userSelect = "none";
         isDragging = true;
+        dadDraggedElement = draggedElement;
+        grandDadDraggedElement = dadDraggedElement;
         draggedElement = x;
+        draggedElement.style.zIndex = parseInt(x.style.zIndex || 0) + 1000;
+        if (dadDraggedElement) {
+            dadDraggedElement.style.zIndex = parseInt(x.style.zIndex || 0) - 1;
+        }
+        if (grandDadDraggedElement) {
+            grandDadDraggedElement.style.zIndex = parseInt(x.style.zIndex || 0) - 1;
+        }
 
         // Calculate offset between mouse and element corner
         offsetX = e.clientX - x.offsetLeft;
@@ -72,7 +84,7 @@ document.addEventListener("mousemove", (e) => {
 
         if (isSnappy == true) {
         //calculate the grid size using offsetHeight and offsetWidth
-        const gridSizeHeight = board.offsetHeight / 10;
+        const gridSizeHeight = board.offsetHeight / 40;
         //const gridSizeHeight = (Math.round((board.offsetHeight / 100) * 100) / 20);
         const gridSizeWidth = (Math.round((board.offsetWidth / 100) * 100) / 20);
         // Snap to board
@@ -92,26 +104,23 @@ document.addEventListener("mousemove", (e) => {
 document.addEventListener("mouseup", () => {
     if (draggedElement) {
         draggedElement.style.cursor = "grab";
-
-
+        draggedElement.style.position = "absolute";
     };
 
-    if (draggedElement) {
-        draggedElement.style.position = "absolute";
-    }
     document.body.style.userSelect = "auto";
     isDragging = false;
 
-    draggedElement = null;
 });
 
 // Add a click event listener to the "Add Note" button
 
 snappyButton.addEventListener('click', () => {
-    if (isSnappy && isSnappy == true) {
+    if (isSnappy == true) {
         isSnappy = false;
+        snappyButton.textContent = "Mode: Free drag"
     } else {
         isSnappy = true;
+        snappyButton.textContent = "Mode: Snaps to grid"
     }
 })
 
