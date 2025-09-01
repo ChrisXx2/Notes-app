@@ -1,6 +1,145 @@
 // alternate universe... for now 👀
+// this is just a draft place
+//actual draft is the chaos in my notebook rn 🥲
 
-document.addEventListener("mouseup", () => {
+const board = document.getElementById("board");
+const addNoteButton = document.getElementById("add-note");
+const addCheckListButton = document.getElementById("add-checklist");
+
+let draggedElement = null;
+
+// --- Swapping ---
+function makeSwappable(note) {
+    note.addEventListener("mousedown", (e) => {
+        if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+
+        draggedElement = note;
+        note.style.opacity = "0.5";
+
+        function onMouseMove(e) {
+            const overElement = document.elementFromPoint(e.clientX, e.clientY);
+            if (!overElement) return;
+
+            const overNote = overElement.closest(".note");
+            if (overNote && overNote !== draggedElement) {
+                // Swap positions in the document
+                const draggedIndex = Array.from(board.children).indexOf(draggedElement);
+                const overIndex = Array.from(board.children).indexOf(overNote);
+
+                if (draggedIndex < overIndex) {
+                    board.insertBefore(draggedElement, overNote.nextSibling);
+                } else {
+                    board.insertBefore(draggedElement, overNote);
+                }
+            }
+        }
+
+        function onMouseUp() {
+            draggedElement.style.opacity = "1";
+            draggedElement = null;
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+        }
+
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+    });
+}
+
+// --- Helper for delete buttons ---
+function createDeleteButton(x) {
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'deleteButton';
+    deleteButton.textContent = "x";
+    deleteButton.onclick = () => x.remove();
+    x.appendChild(deleteButton);
+}
+
+// --- Add Note ---
+addNoteButton.addEventListener('click', () => {
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.textContent = "New Note";
+    createDeleteButton(note);
+
+    const textZone = document.createElement('textarea');
+    textZone.className = "text-zone";
+    note.appendChild(textZone);
+
+    board.appendChild(note);
+    makeSwappable(note);
+});
+
+// --- Add Checklist ---
+addCheckListButton.addEventListener('click', () => {
+    const checkList = document.createElement('div');
+    checkList.className = "note";
+    checkList.textContent = "New List";
+    createDeleteButton(checkList);
+
+    const addItem = document.createElement('button');
+    addItem.className = "add-item-button";
+    addItem.textContent = "Add item";
+
+    addItem.addEventListener('click', () => {
+        const item = document.createElement('div');
+        const addCheckBox = document.createElement('input');
+        addCheckBox.type = 'checkbox';
+        const addInput = document.createElement('input');
+        addInput.value = "New item";
+        createDeleteButton(item);
+
+        item.appendChild(addCheckBox);
+        item.appendChild(addInput);
+        checkList.appendChild(item);
+    });
+
+    checkList.appendChild(addItem);
+    board.appendChild(checkList);
+    makeSwappable(checkList);
+});
+//------------------------------------------
+
+x.addEventListener("mousemove", (e) => {
+    if (isDragging && draggedElement) {
+        const boardRect = board.getBoundingClientRect()
+        const elemRect = draggedElement.getBoundingClientRect();
+        // Calculate new position
+        let newLeft = e.clientX - offsetX;
+        let newTop = e.clientY - offsetY;
+
+        // Restrict horizontally
+        if (newLeft < 0) newLeft = 0;
+        if (newLeft + elemRect.width > boardRect.width) {
+            newLeft = boardRect.width - elemRect.width;
+        }
+
+        // Restrict vertically
+        if (newTop < 0) newTop = 0;
+        if (newTop + elemRect.height > boardRect.height) {
+            newTop = boardRect.height - elemRect.height;
+        }
+
+        if (snappyMode == 2) {
+        //calculate the grid size using offsetHeight and offsetWidth
+        const gridSizeHeight = board.offsetHeight / 40;
+        //const gridSizeHeight = (Math.round((board.offsetHeight / 100) * 100) / 20);
+        const gridSizeWidth = (Math.round((board.offsetWidth / 100) * 100) / 20);
+        // Snap to board
+        
+        draggedElement.style.left = (Math.round((newLeft - boardRect.left) / gridSizeWidth) * gridSizeWidth) + "px";
+        draggedElement.style.top  = (Math.round((newTop - boardRect.top) / gridSizeHeight) * gridSizeHeight) + "px";
+    } else {
+        draggedElement.style.left = newLeft + "px";
+        draggedElement.style.top = newTop + "px";
+    }
+
+    }
+});
+
+
+// Stop dragging when mouse released
+x.addEventListener("mouseup", () => {
     if (draggedElement && snappyMode == 3) {
         const gridSize = 50; // px per cell
         const boardRect = board.getBoundingClientRect();
@@ -28,7 +167,9 @@ document.addEventListener("mouseup", () => {
         draggedElement.style.cursor = "grab";
 //        draggedElement.style.position = "absolute";
     }
+
     document.body.style.userSelect = "auto";
     isDragging = false;
     draggedElement = null;
+
 });
