@@ -14,6 +14,23 @@ let snappyMode = 1;
 let pageVersion = 1;
 let draggedNote = null;
 
+function saveBoard() {
+    const boardItems = board.innerHTML
+    localStorage.setItem("currentBoard", boardItems);
+};
+
+function loadBoard() {
+  const saved = localStorage.getItem("currentBoard");
+  if (saved) {
+    board.innerHTML = saved;
+    board.querySelectorAll(".note, .note-list").forEach(el => {
+      if (pageVersion === 1) makeDraggable(el);
+      else makeSwappable(el);
+    });
+  };
+};
+
+window.addEventListener("DOMContentLoaded", loadBoard);
 
 function createDeleteButton(x) {
     const deleteButton = document.createElement('button');
@@ -106,7 +123,7 @@ function makeDraggable(x) {
     }
 
 // Stop dragging when mouse released
-    x.addEventListener("mouseup", () => {
+    function onMouseUp(){
         if (draggedElement && snappyMode == 3) {
             const gridSize = 50; // px per cell
             const boardRect = board.getBoundingClientRect();
@@ -141,8 +158,13 @@ function makeDraggable(x) {
 
         // Remove global mousemove listener
         document.removeEventListener("mousemove", onMouseMove);
-    });
-}
+        document.removeEventListener("mouseup", onMouseUp)
+        saveBoard();
+    };
+
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+};
 
 function makeSwappable(note) {
     note.addEventListener("mousedown", (e) => {
@@ -159,15 +181,16 @@ function makeSwappable(note) {
 
             const overNote = overElement.closest(".note");
             const overList = overElement.closest(".note-list");
-            if (overNote && overNote !== draggedNote || overList && overList !== draggedNote) {
+            const overSomething = overNote || overList;
+            if (overSomething && overSomething !== draggedNote) {
                 // Swap positions in the document
                 const draggedIndex = Array.from(board.children).indexOf(draggedNote);
-                const overIndex = Array.from(board.children).indexOf(overNote);
+                const overIndex = Array.from(board.children).indexOf(overSomething);
 
                 if (draggedIndex < overIndex) {
-                    board.insertBefore(draggedNote, overNote.nextSibling);
+                    board.insertBefore(draggedNote, overSomething.nextSibling);
                 } else {
-                    board.insertBefore(draggedNote, overNote);
+                    board.insertBefore(draggedNote, overSomething);
                 }
             }
         }
@@ -177,6 +200,7 @@ function makeSwappable(note) {
             draggedNote = null;
             document.removeEventListener("mousemove", onMouseMove);
             document.removeEventListener("mouseup", onMouseUp);
+            saveBoard();
         }
 
         document.addEventListener("mousemove", onMouseMove);
@@ -220,13 +244,17 @@ addNoteButton.addEventListener('click', () => {
     } else {
         makeSwappable(note)
     }
-    board.appendChild(note);                     
+    board.appendChild(note);          
+    saveBoard();           
 });
 
 addCheckListButton.addEventListener('click', () => {
     const checkList = document.createElement('div');
     checkList.className = "note-list";
     checkList.textContent = "new list";
+
+    const dragHandle = document.createElement('div');
+    dragHandle.className = "drag-handle";
 
     createDeleteButton(checkList);
 
@@ -247,6 +275,7 @@ addCheckListButton.addEventListener('click', () => {
         item.appendChild(addCheckBox)
         item.appendChild(addInput)
         checkList.appendChild(item)
+        saveBoard();
     })
 
     checkList.appendChild(addItem)
@@ -256,6 +285,7 @@ addCheckListButton.addEventListener('click', () => {
         makeSwappable(checkList)
     }
     board.appendChild(checkList);
+    saveBoard();
     
 });
 
@@ -267,8 +297,10 @@ versionSwapButton.addEventListener('click', () => {
     });
     if (pageVersion == 1) {
         pageVersion = 2
+        versionSwapButton.textContent = "Mode: swap"
     } else {
-        pageVersion == 1
+        pageVersion = 1
+        versionSwapButton.textContent = "Mode: Drag"
     }
 
 
