@@ -6,14 +6,14 @@ const board = document.getElementById("board");
 const addNoteButton = document.getElementById("add-note");
 const addCheckListButton = document.getElementById("add-checklist");
 
-let draggedElement = null;
+let draggedNote = null;
 
 // --- Swapping ---
 function makeSwappable(note) {
     note.addEventListener("mousedown", (e) => {
         if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
 
-        draggedElement = note;
+        draggedNote = note;
         note.style.opacity = "0.5";
 
         function onMouseMove(e) {
@@ -21,22 +21,22 @@ function makeSwappable(note) {
             if (!overElement) return;
 
             const overNote = overElement.closest(".note");
-            if (overNote && overNote !== draggedElement) {
+            if (overNote && overNote !== draggedNote) {
                 // Swap positions in the document
-                const draggedIndex = Array.from(board.children).indexOf(draggedElement);
+                const draggedIndex = Array.from(board.children).indexOf(draggedNote);
                 const overIndex = Array.from(board.children).indexOf(overNote);
 
                 if (draggedIndex < overIndex) {
-                    board.insertBefore(draggedElement, overNote.nextSibling);
+                    board.insertBefore(draggedNote, overNote.nextSibling);
                 } else {
-                    board.insertBefore(draggedElement, overNote);
+                    board.insertBefore(draggedNote, overNote);
                 }
             }
         }
 
         function onMouseUp() {
-            draggedElement.style.opacity = "1";
-            draggedElement = null;
+            draggedNote.style.opacity = "1";
+            draggedNote = null;
             document.removeEventListener("mousemove", onMouseMove);
             document.removeEventListener("mouseup", onMouseUp);
         }
