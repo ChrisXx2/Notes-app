@@ -1,307 +1,295 @@
-const board = document.getElementById("board");       // Select the board container element
-const addNoteButton = document.getElementById("add-note"); // Select the "Add Note" button
-const addCheckListButton = document.getElementById("add-checklist");
-const snappyButton = document.getElementById("toggle-snap");
-const versionSwapButton = document.getElementById("card-swap-mode");
+// === Constants for Modes ===
+const DRAG_MODE_FREE = 1;
+const DRAG_MODE_GRID = 2;
+const DRAG_MODE_SNAP_ON_RELEASE = 3;
 
-let allowDrag = true; // important for later
-let isDragging = false;   // If dragging is active or not
-let draggedElement = null; // Which element *is* being dragged
-let previousDraggedElement = null; //Which element *was* being dragged
-let secondPreviousDraggedElement = null; //Old ahh
-let offsetX, offsetY;     // Mouse offset inside the element
-let snappyMode = 1;
-let pageVersion = 1;
-let draggedNote = null;
+const INTERACTION_MODE_DRAG = 1;
+const INTERACTION_MODE_SWAP = 2;
 
-function saveBoard() {
-    const boardItems = board.innerHTML
-    localStorage.setItem("currentBoard", boardItems);
-};
+// === DOM Elements ===
+const board = document.getElementById("board");
+const addNoteButton = document.getElementById("add-note");
+const addChecklistButton = document.getElementById("add-checklist");
+const toggleDragModeButton = document.getElementById("toggle-snap");
+const toggleInteractionModeButton = document.getElementById("card-swap-mode");
 
-function loadBoard() {
+// === State Variables ===
+let allowDragWhileEditing = true;
+let isDragging = false;
+let activeDraggedElement = null;
+let activeSwappedElement = null;
+
+let lastDraggedElement = null;
+let mouseOffsetX = 0;
+let mouseOffsetY = 0;
+
+let dragMode = DRAG_MODE_FREE;
+let interactionMode = INTERACTION_MODE_DRAG;
+
+// === Local Storage ===
+function saveBoardToStorage() {
+  localStorage.setItem("currentBoard", board.innerHTML);
+}
+
+function loadBoardFromStorage() {
   const saved = localStorage.getItem("currentBoard");
   if (saved) {
     board.innerHTML = saved;
+    // Reattach behaviour to saved elements
     board.querySelectorAll(".note, .note-list").forEach(el => {
-      if (pageVersion === 1) makeDraggable(el);
-      else makeSwappable(el);
+      if (interactionMode === INTERACTION_MODE_DRAG) {
+        enableDragForElement(el);
+      } else {
+        enableSwapForElement(el);
+      }
     });
+  }
+}
+window.addEventListener("DOMContentLoaded", loadBoardFromStorage);
+
+// === Helper Buttons ===
+function attachDeleteButton(element) {
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "deleteButton";
+  deleteButton.textContent = "x";
+  deleteButton.onclick = () => {
+    element.remove();
+    saveBoardToStorage();
   };
-};
-
-window.addEventListener("DOMContentLoaded", loadBoard);
-
-function createDeleteButton(x) {
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'deleteButton';     // Assign class for styling
-    deleteButton.textContent = "x";              // Set button text to "x"
-    deleteButton.onclick = () => {
-        x.remove();                           // Remove the note when delete button is clicked
-    };
-    x.appendChild(deleteButton);
-};
-
-function createItemDeleteButton(x) {
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'itemDeleteButton';     // Assign class for styling
-    deleteButton.textContent = "x";              // Set button text to "x"
-    deleteButton.onclick = () => {
-        x.remove();                           // Remove the note when delete button is clicked
-    };
-    x.appendChild(deleteButton);
-};
-
-//  Make any element draggable
-function makeDraggable(x) {
-    x.style.cursor = "grab";       // Show grab cursor
-
-    x.addEventListener('mousedown', (e) => {
-        if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDrag == true) {
-            return;
-        }
-        x.style.position = "absolute"; // Important: allows free movement
- 
-        document.body.style.userSelect = "none";
-        isDragging = true;
-        previousDraggedElement = draggedElement;
-        secondPreviousDraggedElement = previousDraggedElement;
-        draggedElement = x;
-        draggedElement.style.zIndex = (parseInt(x.style.zIndex, 10) || 0) + 1000;
-        if (previousDraggedElement) {
-            previousDraggedElement.style.zIndex = parseInt(previousDraggedElement.style.zIndex || 0) - 1;
-        }
-        if (secondPreviousDraggedElement) {
-            secondPreviousDraggedElement.style.zIndex = parseInt(x.style.zIndex || 0) - 1;
-        }
-
-        // Calculate offset between mouse and element corner
-        offsetX = e.clientX - x.offsetLeft;
-        offsetY = e.clientY - x.offsetTop;
-
-        x.style.cursor = "grabbing";
-
-        // Attach global mousemove listener
-        document.addEventListener("mousemove", onMouseMove);
-    });
-    // Remove per-element mousemove listener.
-    // We'll use a global mousemove listener during drag.
-
-    function onMouseMove(e) {
-        if (isDragging && draggedElement) {
-            const boardRect = board.getBoundingClientRect();
-            const elemRect = draggedElement.getBoundingClientRect();
-            // Calculate new position
-            let newLeft = e.clientX - offsetX;
-            let newTop = e.clientY - offsetY;
-
-            // Restrict horizontally
-            if (newLeft < 0) newLeft = 0;
-            if (newLeft + elemRect.width > boardRect.width) {
-                newLeft = boardRect.width - elemRect.width;
-            }
-
-            // Restrict vertically
-            if (newTop < 0) newTop = 0;
-            if (newTop + elemRect.height > boardRect.height) {
-                newTop = boardRect.height - elemRect.height;
-            }
-
-            if (snappyMode == 2) {
-                //calculate the grid size using offsetHeight and offsetWidth
-                const gridSizeHeight = board.offsetHeight / 40;
-                const gridSizeWidth = (Math.round((board.offsetWidth / 100) * 100) / 20);
-                // Snap to board
-
-                draggedElement.style.left = (Math.round((newLeft - boardRect.left) / gridSizeWidth) * gridSizeWidth) + "px";
-                draggedElement.style.top  = (Math.round((newTop - boardRect.top) / gridSizeHeight) * gridSizeHeight) + "px";
-            } else {
-                draggedElement.style.left = newLeft + "px";
-                draggedElement.style.top = newTop + "px";
-            }
-        }
-    }
-
-// Stop dragging when mouse released
-    function onMouseUp(){
-        if (draggedElement && snappyMode == 3) {
-            const gridSize = 50; // px per cell
-            const boardRect = board.getBoundingClientRect();
-
-            // Current absolute position
-            let absLeft = parseInt(draggedElement.style.left, 10);
-            let absTop  = parseInt(draggedElement.style.top, 10);
-
-            // Position relative to the board
-            let relLeft = absLeft - boardRect.left;
-            let relTop  = absTop - boardRect.top;
-
-            // Snap relative coordinates
-            relLeft = Math.round(relLeft / gridSize) * gridSize;
-            relTop  = Math.round(relTop / gridSize) * gridSize;
-
-            // Clamp so it doesn’t escape the board
-            relLeft = Math.max(0, Math.min(relLeft, boardRect.width - draggedElement.offsetWidth));
-            relTop  = Math.max(0, Math.min(relTop, boardRect.height - draggedElement.offsetHeight));
-
-            // Apply back in absolute terms
-            draggedElement.style.left = (boardRect.left + relLeft) + "px";
-            draggedElement.style.top  = (boardRect.top + relTop) + "px";
-
-            draggedElement.style.cursor = "grab";
-//            draggedElement.style.position = "absolute";
-        }
-
-        document.body.style.userSelect = "auto";
-        isDragging = false;
-        draggedElement = null;
-
-        // Remove global mousemove listener
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp)
-        saveBoard();
-    };
-
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-};
-
-function makeSwappable(note) {
-    note.addEventListener("mousedown", (e) => {
-        if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDrag == true) {
-            return;
-        }
-
-        draggedNote = note;
-        note.style.opacity = "0.5";
-
-        function onMouseMove(e) {
-            const overElement = document.elementFromPoint(e.clientX, e.clientY);
-            if (!overElement) return;
-
-            const overNote = overElement.closest(".note");
-            const overList = overElement.closest(".note-list");
-            const overSomething = overNote || overList;
-            if (overSomething && overSomething !== draggedNote) {
-                // Swap positions in the document
-                const draggedIndex = Array.from(board.children).indexOf(draggedNote);
-                const overIndex = Array.from(board.children).indexOf(overSomething);
-
-                if (draggedIndex < overIndex) {
-                    board.insertBefore(draggedNote, overSomething.nextSibling);
-                } else {
-                    board.insertBefore(draggedNote, overSomething);
-                }
-            }
-        }
-
-        function onMouseUp() {
-            draggedNote.style.opacity = "1";
-            draggedNote = null;
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseup", onMouseUp);
-            saveBoard();
-        }
-
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-    });
+  element.appendChild(deleteButton);
 }
 
+function attachItemDeleteButton(element) {
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "itemDeleteButton";
+  deleteButton.textContent = "x";
+  deleteButton.onclick = () => {
+    element.remove();
+    saveBoardToStorage();
+  };
+  element.appendChild(deleteButton);
+}
 
-// Add a click event listener to the "Add Note" button
+// === Dragging Logic ===
+function enableDragForElement(element) {
+  element.style.cursor = "grab";
 
-snappyButton.addEventListener('click', () => {
-    if (snappyMode == 3) {
-        snappyMode = 1;
-        snappyButton.textContent = "Drag mode: free drag, no snap";
-    } else if (snappyMode == 1) {
-        snappyMode = 2;
-        snappyButton.textContent = "Drag mode: drags across the grid";
-    } else  if (snappyMode == 2) {
-        snappyMode = 3;
-        snappyButton.textContent = "Drag mode: free drag, Snaps to grid on release";
+  element.addEventListener("mousedown", e => {
+    if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
+      return;
     }
-})
 
-addNoteButton.addEventListener('click', () => {
-    const note = document.createElement('div');  // Create a new div for the note
-    note.className = 'note';                     // Assign the 'note' class for styling
-    note.textContent = "New Note";               // Set initial content (will later change to input)
+    element.style.position = "absolute";
+    document.body.style.userSelect = "none";
 
-    createDeleteButton(note);
+    isDragging = true;
+    lastDraggedElement = activeDraggedElement;
+    activeDraggedElement = element;
 
-    // Create a textarea for note content
-    const textZone = document.createElement('textarea');
-    textZone.className = "text-zone";            // Assign class for styling
+    // Raise z-index so dragged item stays on top
+    activeDraggedElement.style.zIndex = (parseInt(element.style.zIndex, 10) || 0) + 1000;
 
-    // Append the delete button and textarea to the note
-    note.appendChild(textZone);
+    mouseOffsetX = e.clientX - element.offsetLeft;
+    mouseOffsetY = e.clientY - element.offsetTop;
+    element.style.cursor = "grabbing";
 
-    // Add the note to the board
-    if (pageVersion == 1) {
-        makeDraggable(note);
-    } else {
-        makeSwappable(note)
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  });
+
+  function onMouseMove(e) {
+    if (isDragging && activeDraggedElement) {
+      const boardRect = board.getBoundingClientRect();
+      const elemRect = activeDraggedElement.getBoundingClientRect();
+
+      let newLeft = e.clientX - mouseOffsetX;
+      let newTop = e.clientY - mouseOffsetY;
+
+      // Keep inside board horizontally
+      if (newLeft < 0) newLeft = 0;
+      if (newLeft + elemRect.width > boardRect.width) {
+        newLeft = boardRect.width - elemRect.width;
+      }
+      // Keep inside board vertically
+      if (newTop < 0) newTop = 0;
+      if (newTop + elemRect.height > boardRect.height) {
+        newTop = boardRect.height - elemRect.height;
+      }
+
+      // snappy drag vs free drag
+      if (dragMode === DRAG_MODE_GRID) {
+        const gridSizeHeight = board.offsetHeight / 40;
+        const gridSizeWidth = board.offsetWidth / 20;
+        activeDraggedElement.style.left =
+          Math.round((newLeft - boardRect.left) / gridSizeWidth) * gridSizeWidth + "px";
+        activeDraggedElement.style.top =
+          Math.round((newTop - boardRect.top) / gridSizeHeight) * gridSizeHeight + "px";
+      } else {
+        activeDraggedElement.style.left = newLeft + "px";
+        activeDraggedElement.style.top = newTop + "px";
+      }
     }
-    board.appendChild(note);          
-    saveBoard();           
+  }
+
+  function onMouseUp() {
+    if (activeDraggedElement && dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
+      const gridSize = 50; // px per cell
+      const boardRect = board.getBoundingClientRect();
+
+      let absLeft = parseInt(activeDraggedElement.style.left, 10);
+      let absTop = parseInt(activeDraggedElement.style.top, 10);
+
+      let relLeft = absLeft - boardRect.left;
+      let relTop = absTop - boardRect.top;
+
+      relLeft = Math.round(relLeft / gridSize) * gridSize;
+      relTop = Math.round(relTop / gridSize) * gridSize;
+
+      relLeft = Math.max(0, Math.min(relLeft, boardRect.width - activeDraggedElement.offsetWidth));
+      relTop = Math.max(0, Math.min(relTop, boardRect.height - activeDraggedElement.offsetHeight));
+
+      activeDraggedElement.style.left = boardRect.left + relLeft + "px";
+      activeDraggedElement.style.top = boardRect.top + relTop + "px";
+      activeDraggedElement.style.cursor = "grab";
+    }
+
+    document.body.style.userSelect = "auto";
+    isDragging = false;
+    activeDraggedElement = null;
+
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+
+    saveBoardToStorage();
+  }
+}
+
+// === Swapping Logic ===
+function enableSwapForElement(element) {
+  element.addEventListener("mousedown", e => {
+    if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
+      return;
+    }
+
+    activeSwappedElement = element;
+    element.style.opacity = "0.5";
+
+    function onMouseMove(e) {
+      const overElement = document.elementFromPoint(e.clientX, e.clientY);
+      if (!overElement) return;
+
+      const overNote = overElement.closest(".note");
+      const overList = overElement.closest(".note-list");
+      const overTarget = overNote || overList;
+
+      if (overTarget && overTarget !== activeSwappedElement) {
+        const draggedIndex = Array.from(board.children).indexOf(activeSwappedElement);
+        const overIndex = Array.from(board.children).indexOf(overTarget);
+
+        if (draggedIndex < overIndex) {
+          board.insertBefore(activeSwappedElement, overTarget.nextSibling);
+        } else {
+          board.insertBefore(activeSwappedElement, overTarget);
+        }
+      }
+    }
+
+    function onMouseUp() {
+      activeSwappedElement.style.opacity = "1";
+      activeSwappedElement = null;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      saveBoardToStorage();
+    }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  });
+}
+
+// === UI Buttons ===
+toggleDragModeButton.addEventListener("click", () => {
+  if (dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
+    dragMode = DRAG_MODE_FREE;
+    toggleDragModeButton.textContent = "Drag mode: free drag, no snap";
+  } else if (dragMode === DRAG_MODE_FREE) {
+    dragMode = DRAG_MODE_GRID;
+    toggleDragModeButton.textContent = "Drag mode: drag across grid";
+  } else if (dragMode === DRAG_MODE_GRID) {
+    dragMode = DRAG_MODE_SNAP_ON_RELEASE;
+    toggleDragModeButton.textContent = "Drag mode: free drag, snap on release";
+  }
 });
 
-addCheckListButton.addEventListener('click', () => {
-    const checkList = document.createElement('div');
-    checkList.className = "note-list";
-    checkList.textContent = "new list";
+// Add Note Button
+addNoteButton.addEventListener("click", () => {
+  const note = document.createElement("div");
+  note.className = "note";
+  note.textContent = "New Note";
 
-    const dragHandle = document.createElement('div');
-    dragHandle.className = "drag-handle";
+  attachDeleteButton(note);
 
-    createDeleteButton(checkList);
+  const textZone = document.createElement("textarea");
+  textZone.className = "text-zone";
+  note.appendChild(textZone);
 
-    const addItem = document.createElement('button');
-    addItem.className = "add-item-button";
-    addItem.textContent = "Add item";
-
-    addItem.addEventListener('click', () => {
-        const item = document.createElement('div');
-        const addCheckBox = document.createElement('input');
-        addCheckBox.className = "list-item-checkbox";
-        addCheckBox.type = 'checkbox'
-        const addInput = document.createElement('input');
-        addInput.className = "list-item-input";
-        addInput.value = "New item";
-        createItemDeleteButton(item);
-
-        item.appendChild(addCheckBox)
-        item.appendChild(addInput)
-        checkList.appendChild(item)
-        saveBoard();
-    })
-
-    checkList.appendChild(addItem)
-    if (pageVersion == 1) {
-        makeDraggable(checkList);
-    } else {
-        makeSwappable(checkList)
-    }
-    board.appendChild(checkList);
-    saveBoard();
-    
+  if (interactionMode === INTERACTION_MODE_DRAG) {
+    enableDragForElement(note);
+  } else {
+    enableSwapForElement(note);
+  }
+  board.appendChild(note);
+  saveBoardToStorage();
 });
 
-versionSwapButton.addEventListener('click', () => {
+// Add Checklist Button
+addChecklistButton.addEventListener("click", () => {
+  const checklist = document.createElement("div");
+  checklist.className = "note-list";
+  checklist.textContent = "New list";
 
-    //work in progress
-    Array.from(board.children).forEach((x) => {
-        x.remove();        
-    });
-    if (pageVersion == 1) {
-        pageVersion = 2
-        versionSwapButton.textContent = "Mode: swap"
-    } else {
-        pageVersion = 1
-        versionSwapButton.textContent = "Mode: Drag"
-    }
+  attachDeleteButton(checklist);
 
+  const addItemButton = document.createElement("button");
+  addItemButton.className = "add-item-button";
+  addItemButton.textContent = "Add item";
 
+  addItemButton.addEventListener("click", () => {
+    const item = document.createElement("div");
+    const checkBox = document.createElement("input");
+    checkBox.className = "list-item-checkbox";
+    checkBox.type = "checkbox";
+
+    const input = document.createElement("input");
+    input.className = "list-item-input";
+    input.value = "New item";
+
+    attachItemDeleteButton(item);
+
+    item.appendChild(checkBox);
+    item.appendChild(input);
+    checklist.appendChild(item);
+    saveBoardToStorage();
+  });
+
+  checklist.appendChild(addItemButton);
+  if (interactionMode === INTERACTION_MODE_DRAG) {
+    enableDragForElement(checklist);
+  } else {
+    enableSwapForElement(checklist);
+  }
+  board.appendChild(checklist);
+  saveBoardToStorage();
+});
+
+// Swap Mode Button
+toggleInteractionModeButton.addEventListener("click", () => {
+  Array.from(board.children).forEach(x => x.remove());
+  if (interactionMode === INTERACTION_MODE_DRAG) {
+    interactionMode = INTERACTION_MODE_SWAP;
+    toggleInteractionModeButton.textContent = "Mode: swap";
+  } else {
+    interactionMode = INTERACTION_MODE_DRAG;
+    toggleInteractionModeButton.textContent = "Mode: drag";
+  }
 });
