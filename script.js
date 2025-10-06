@@ -1,3 +1,4 @@
+// Find me on Discord : chris.y.l.o
 // === Constants for Modes ===
 const DRAG_MODE_FREE = 1;
 const DRAG_MODE_GRID = 2;
