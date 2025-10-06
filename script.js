@@ -122,9 +122,9 @@ function enableDragForElement(element) {
         const gridSizeHeight = board.offsetHeight / 40;
         const gridSizeWidth = board.offsetWidth / 20;
         activeDraggedElement.style.left =
-          Math.round((newLeft - boardRect.left) / gridSizeWidth) * gridSizeWidth + "px";
+          Math.round((newLeft) / gridSizeWidth) * gridSizeWidth + "px";
         activeDraggedElement.style.top =
-          Math.round((newTop - boardRect.top) / gridSizeHeight) * gridSizeHeight + "px";
+          Math.round((newTop) / gridSizeHeight) * gridSizeHeight + "px";
       } else {
         activeDraggedElement.style.left = newLeft + "px";
         activeDraggedElement.style.top = newTop + "px";
@@ -134,7 +134,7 @@ function enableDragForElement(element) {
 
   function onMouseUp() {
     if (activeDraggedElement && dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
-      const gridSize = 50; // px per cell
+      const gridSize = 50;
       const boardRect = board.getBoundingClientRect();
 
       let absLeft = parseInt(activeDraggedElement.style.left, 10);
@@ -167,6 +167,8 @@ function enableDragForElement(element) {
 
 // === Swapping Logic ===
 function enableSwapForElement(element) {
+  element.style.cursor = "grab";
+
   element.addEventListener("mousedown", e => {
     if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
       return;
