@@ -90,6 +90,32 @@ button:hover {
     box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
 }
 
+/* Note title */
+.note-title {
+    width: 100%;
+    border: none;
+    resize: none;
+    padding: 5px;
+    border-radius: 5px;
+    outline: none;
+    font-size: 14px;
+    background: #fff;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* List title */
+.list-title {
+    width: 100%;
+    border: none;
+    resize: none;
+    padding: 5px;
+    border-radius: 5px;
+    outline: none;
+    font-size: 14px;
+    background: #fff;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
 /* Checklist items */
 .list-item-input {
     border: none;

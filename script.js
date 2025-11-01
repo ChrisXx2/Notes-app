@@ -210,7 +210,7 @@ function enableSwapForElement(element) {
   });
 }
 
-// === UI Buttons ===
+// === Action Buttons ===
 toggleDragModeButton.addEventListener("click", () => {
   if (dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
     dragMode = DRAG_MODE_FREE;
@@ -228,9 +228,12 @@ toggleDragModeButton.addEventListener("click", () => {
 addNoteButton.addEventListener("click", () => {
   const note = document.createElement("div");
   note.className = "note";
-  note.textContent = "New Note";
 
   attachDeleteButton(note);
+
+  const noteTitle = document.createElement("textarea");
+  noteTitle.className = "note-title";
+  note.appendChild(noteTitle);
 
   const textZone = document.createElement("textarea");
   textZone.className = "text-zone";
@@ -249,9 +252,12 @@ addNoteButton.addEventListener("click", () => {
 addChecklistButton.addEventListener("click", () => {
   const checklist = document.createElement("div");
   checklist.className = "note-list";
-  checklist.textContent = "New list";
 
   attachDeleteButton(checklist);
+
+  const listTitle = document.createElement("textarea");
+  listTitle.className = "list-title";
+  checklist.appendChild(listTitle);
 
   const addItemButton = document.createElement("button");
   addItemButton.className = "add-item-button";
