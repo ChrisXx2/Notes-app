@@ -323,19 +323,13 @@ function enableSwapForElement(element) {
 // === Action Buttons ===
 toggleDragModeButton.addEventListener("click", () => {
   if (dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
-    saveBoardToStorage();
     dragMode = DRAG_MODE_FREE;
-    loadBoardFromStorage();
     toggleDragModeButton.textContent = "Drag mode: free drag, no snap";
   } else if (dragMode === DRAG_MODE_FREE) {
-    saveBoardToStorage();
     dragMode = DRAG_MODE_GRID;
-    loadBoardFromStorage();
     toggleDragModeButton.textContent = "Drag mode: drag across grid";
   } else if (dragMode === DRAG_MODE_GRID) {
-    saveBoardToStorage();
     dragMode = DRAG_MODE_SNAP_ON_RELEASE;
-    loadBoardFromStorage();
     toggleDragModeButton.textContent = "Drag mode: free drag, snap on release";
   }
 });
@@ -411,6 +405,7 @@ addChecklistButton.addEventListener("click", () => {
 toggleInteractionModeButton.addEventListener("click", () => {
   saveBoardToStorage();
   Array.from(board.children).forEach(x => x.remove());
+  board.innerHTML = "";
   if (interactionMode === INTERACTION_MODE_DRAG) {
     interactionMode = INTERACTION_MODE_SWAP;
     toggleInteractionModeButton.textContent = "Mode: swap";
