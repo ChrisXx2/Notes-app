@@ -29,22 +29,132 @@ let interactionMode = INTERACTION_MODE_DRAG;
 
 // === Local Storage ===
 function saveBoardToStorage() {
-  localStorage.setItem("currentBoard", board.innerHTML);
+  const notes = Array.from(board.querySelectorAll('.note')).map(note => ({
+    type: note.className,
+    title: note.querySelector('.note-title')?.value || "Untitled",
+    content: note.querySelector('.text-zone')?.value || "",
+    position: { left: note.style.left, top: note.style.top },
+    color: note.style.background || "#fffdf5"
+  }));
+
+  const lists = Array.from(board.querySelectorAll('.note-list')).map(list => ({
+    type: list.className,
+    title: list.querySelector('.list-title')?.value || "Untitled",
+    items: Array.from(list.querySelectorAll("div")).map(item => ({
+        text: item.querySelector(".list-item-input")?.value || "",
+        checked: item.querySelector(".list-item-checkbox")?.checked || false
+      })),
+    position: { left: list.style.left, top: list.style.top },
+    color: list.style.background || "#fffdf5"
+  }));
+
+  const allItems = [...notes, ...lists];
+  localStorage.setItem("currentBoard", JSON.stringify(allItems));
+
 }
 
 function loadBoardFromStorage() {
-  const saved = localStorage.getItem("currentBoard");
-  if (saved) {
-    board.innerHTML = saved;
-    // Reattach behaviour to saved elements
-    board.querySelectorAll(".note, .note-list").forEach(el => {
+  const savedNotes = localStorage.getItem("currentBoard");
+  if (!savedNotes) return;
+
+  const allItems = JSON.parse(savedNotes);
+  board.innerHTML = "";
+
+  allItems.forEach(backedItem => {
+    if (backedItem.type == 'note') {
+      const note = document.createElement("div");
+      note.className = "note";
+
+      attachDeleteButton(note);
+
+      const noteTitle = document.createElement("textarea");
+      noteTitle.className = "note-title";
+      noteTitle.value = backedItem.title;
+      note.appendChild(noteTitle);
+
+      const textZone = document.createElement("textarea");
+      textZone.className = "text-zone";
+      textZone.value = backedItem.content
+      note.appendChild(textZone);
+
       if (interactionMode === INTERACTION_MODE_DRAG) {
-        enableDragForElement(el);
-      } else {
-        enableSwapForElement(el);
+          note.style.left = backedItem.position.left;
+          note.style.top = backedItem.position.top;
+          enableDragForElement(checklist);
       }
-    });
-  }
+
+     if (interactionMode === INTERACTION_MODE_DRAG) {
+          enableDragForElement(note);
+        } else {
+          enableSwapForElement(note);
+        }
+  board.appendChild(note);
+
+    } else 
+      if (backedItem.type == 'note-list') {
+                const checklist = document.createElement("div");
+                checklist.className = "note-list";
+
+               attachDeleteButton(checklist);
+
+                const listTitle = document.createElement("textarea");
+                listTitle.className = "list-title";
+                listTitle.value = backedItem.title
+                checklist.appendChild(listTitle);
+
+                const addItemButton = document.createElement("button");
+                addItemButton.className = "add-item-button";
+                addItemButton.textContent = "Add item";
+
+                addItemButton.addEventListener("click", () => {
+                    const item = document.createElement("div");
+                    const checkBox = document.createElement("input");
+                    checkBox.className = "list-item-checkbox";
+                    checkBox.type = "checkbox";
+                  
+
+                    const input = document.createElement("input");
+                    input.className = "list-item-input";
+                    input.value = "New item";
+
+                    attachItemDeleteButton(item);
+
+                    item.appendChild(checkBox);
+                    item.appendChild(input);
+                    checklist.appendChild(item);
+                });
+
+                checklist.appendChild(addItemButton);
+
+                backedItem.items.forEach(backedInput => {
+                  const item = document.createElement("div");
+                    const checkBox = document.createElement("input");
+                    checkBox.className = "list-item-checkbox";
+                    checkBox.type = "checkbox";
+                    checkBox.checked = backedInput.checked;
+                  
+                    const input = document.createElement("input");
+                    input.className = "list-item-input";
+                    input.value = backedInput.text;
+
+                    attachItemDeleteButton(item);
+
+                    item.appendChild(checkBox);
+                    item.appendChild(input);
+                    checklist.appendChild(item);
+                })
+
+                if (interactionMode === INTERACTION_MODE_DRAG) {
+                  checklist.style.left = backedItem.position.left;
+                  checklist.style.top = backedItem.position.top;
+                  enableDragForElement(checklist);
+                } else {
+                  enableSwapForElement(checklist);
+                }
+                board.appendChild(checklist);
+                  }
+                })
+
 }
 window.addEventListener("DOMContentLoaded", loadBoardFromStorage);
 
@@ -213,13 +323,19 @@ function enableSwapForElement(element) {
 // === Action Buttons ===
 toggleDragModeButton.addEventListener("click", () => {
   if (dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
+    saveBoardToStorage();
     dragMode = DRAG_MODE_FREE;
+    loadBoardFromStorage();
     toggleDragModeButton.textContent = "Drag mode: free drag, no snap";
   } else if (dragMode === DRAG_MODE_FREE) {
+    saveBoardToStorage();
     dragMode = DRAG_MODE_GRID;
+    loadBoardFromStorage();
     toggleDragModeButton.textContent = "Drag mode: drag across grid";
   } else if (dragMode === DRAG_MODE_GRID) {
+    saveBoardToStorage();
     dragMode = DRAG_MODE_SNAP_ON_RELEASE;
+    loadBoardFromStorage();
     toggleDragModeButton.textContent = "Drag mode: free drag, snap on release";
   }
 });
@@ -264,21 +380,21 @@ addChecklistButton.addEventListener("click", () => {
   addItemButton.textContent = "Add item";
 
   addItemButton.addEventListener("click", () => {
-    const item = document.createElement("div");
-    const checkBox = document.createElement("input");
-    checkBox.className = "list-item-checkbox";
-    checkBox.type = "checkbox";
+      const item = document.createElement("div");
+      const checkBox = document.createElement("input");
+      checkBox.className = "list-item-checkbox";
+      checkBox.type = "checkbox";
 
-    const input = document.createElement("input");
-    input.className = "list-item-input";
-    input.value = "New item";
+      const input = document.createElement("input");
+      input.className = "list-item-input";
+      input.value = "New item";
 
-    attachItemDeleteButton(item);
+      attachItemDeleteButton(item);
 
-    item.appendChild(checkBox);
-    item.appendChild(input);
-    checklist.appendChild(item);
-    saveBoardToStorage();
+      item.appendChild(checkBox);
+      item.appendChild(input);
+      checklist.appendChild(item);
+      saveBoardToStorage();
   });
 
   checklist.appendChild(addItemButton);
@@ -293,12 +409,15 @@ addChecklistButton.addEventListener("click", () => {
 
 // Swap Mode Button
 toggleInteractionModeButton.addEventListener("click", () => {
+  saveBoardToStorage();
   Array.from(board.children).forEach(x => x.remove());
   if (interactionMode === INTERACTION_MODE_DRAG) {
     interactionMode = INTERACTION_MODE_SWAP;
     toggleInteractionModeButton.textContent = "Mode: swap";
+    loadBoardFromStorage();
   } else {
     interactionMode = INTERACTION_MODE_DRAG;
     toggleInteractionModeButton.textContent = "Mode: drag";
+    loadBoardFromStorage();
   }
 });
