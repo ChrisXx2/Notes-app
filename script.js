@@ -27,6 +27,10 @@ let mouseOffsetY = 0;
 let dragMode = DRAG_MODE_FREE;
 let interactionMode = INTERACTION_MODE_DRAG;
 
+// === Debounce Variables ===
+
+let saveTimeout;
+
 // === Local Storage ===
 function saveBoardToStorage() {
   const notes = Array.from(board.querySelectorAll('.note')).map(note => ({
@@ -51,6 +55,16 @@ function saveBoardToStorage() {
   const allItems = [...notes, ...lists];
   localStorage.setItem("currentBoard", JSON.stringify(allItems));
 
+}
+
+function debounceSave() {
+
+  clearTimeout(saveTimeout)
+
+  saveTimeout = setTimeout (() => {
+
+    saveBoardToStorage();
+  }, 500);
 }
 
 function loadBoardFromStorage() {
@@ -159,6 +173,7 @@ function loadBoardFromStorage() {
 window.addEventListener("DOMContentLoaded", loadBoardFromStorage);
 
 // === Helper Buttons ===
+
 function attachDeleteButton(element) {
   const deleteButton = document.createElement("button");
   deleteButton.className = "deleteButton";
@@ -399,6 +414,19 @@ addChecklistButton.addEventListener("click", () => {
   }
   board.appendChild(checklist);
   saveBoardToStorage();
+});
+
+// Saves after the user types or checks a box
+
+document.addEventListener("input", e => {
+  if (e.target.matches(".note-title, .list-title, .text-zone, .list-item-input")) {
+    debounceSave();
+  }
+});
+document.addEventListener("change", e => {
+  if (e.target.matches(".list-item-checkbox")) {
+    debounceSave();
+  }
 });
 
 // Swap Mode Button
