@@ -54,7 +54,7 @@ function saveBoardToStorage() {
 
   const allItems = [...notes, ...lists];
   localStorage.setItem("currentBoard", JSON.stringify(allItems));
-
+ console.log("saved")
 }
 
 function debounceSave() {
@@ -94,7 +94,7 @@ function loadBoardFromStorage() {
       if (interactionMode === INTERACTION_MODE_DRAG) {
           note.style.left = backedItem.position.left;
           note.style.top = backedItem.position.top;
-          enableDragForElement(checklist);
+          enableDragForElement(note);
       }
 
      if (interactionMode === INTERACTION_MODE_DRAG) {
