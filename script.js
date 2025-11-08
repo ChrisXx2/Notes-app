@@ -27,420 +27,454 @@ let mouseOffsetY = 0;
 let dragMode = DRAG_MODE_FREE;
 let interactionMode = INTERACTION_MODE_DRAG;
 
+const minWidth = 120;
+const minHeight = 80;
+const maxWidth = 600;
+const maxHeight = 500;
+
 // === Debounce Variables ===
 
 let saveTimeout;
 
 // === Local Storage ===
 function saveBoardToStorage() {
-  const notes = Array.from(board.querySelectorAll('.note')).map(note => ({
-    type: note.className,
-    title: note.querySelector('.note-title')?.value || "Untitled",
-    content: note.querySelector('.text-zone')?.value || "",
-    position: { left: note.style.left, top: note.style.top },
-    color: note.style.background || "#fffdf5"
-  }));
+     const notes = Array.from(board.querySelectorAll('.note')).map(note => ({
+          type: note.className,
+          title: note.querySelector('.note-title')?.value || "Untitled",
+          content: note.querySelector('.text-zone')?.value || "",
+          position: { left: note.style.left, top: note.style.top },
+          color: note.style.background || "#fffdf5"
+     }));
 
-  const lists = Array.from(board.querySelectorAll('.note-list')).map(list => ({
-    type: list.className,
-    title: list.querySelector('.list-title')?.value || "Untitled",
-    items: Array.from(list.querySelectorAll("div")).map(item => ({
-        text: item.querySelector(".list-item-input")?.value || "",
-        checked: item.querySelector(".list-item-checkbox")?.checked || false
-      })),
-    position: { left: list.style.left, top: list.style.top },
-    color: list.style.background || "#fffdf5"
-  }));
+     const lists = Array.from(board.querySelectorAll('.note-list')).map(list => ({
+          type: list.className,
+          title: list.querySelector('.list-title')?.value || "Untitled",
+          items: Array.from(list.querySelectorAll("div")).map(item => ({
+                    text: item.querySelector(".list-item-input")?.value || "",
+                    checked: item.querySelector(".list-item-checkbox")?.checked || false
+               })),
+          position: { left: list.style.left, top: list.style.top },
+          color: list.style.background || "#fffdf5"
+     }));
 
-  const allItems = [...notes, ...lists];
-  localStorage.setItem("currentBoard", JSON.stringify(allItems));
+     const allItems = [...notes, ...lists];
+     localStorage.setItem("currentBoard", JSON.stringify(allItems));
  console.log("saved")
 }
 
 function debounceSave() {
 
-  clearTimeout(saveTimeout)
+     clearTimeout(saveTimeout)
 
-  saveTimeout = setTimeout (() => {
+     saveTimeout = setTimeout (() => {
 
-    saveBoardToStorage();
-  }, 500);
+          saveBoardToStorage();
+     }, 500);
 }
 
 function loadBoardFromStorage() {
-  const savedNotes = localStorage.getItem("currentBoard");
-  if (!savedNotes) return;
+     const savedNotes = localStorage.getItem("currentBoard");
+     if (!savedNotes) return;
 
-  const allItems = JSON.parse(savedNotes);
-  board.innerHTML = "";
+     const allItems = JSON.parse(savedNotes);
+     board.innerHTML = "";
 
-  allItems.forEach(backedItem => {
-    if (backedItem.type == 'note') {
-      const note = document.createElement("div");
-      note.className = "note";
+     allItems.forEach(backedItem => {
+          if (backedItem.type == 'note') {
+               const note = document.createElement("div");
+               note.className = "note";
 
-      attachDeleteButton(note);
+               attachDeleteButton(note);
 
-      const noteTitle = document.createElement("textarea");
-      noteTitle.className = "note-title";
-      noteTitle.value = backedItem.title;
-      note.appendChild(noteTitle);
+               const noteTitle = document.createElement("textarea");
+               noteTitle.className = "note-title";
+               noteTitle.value = backedItem.title;
+               note.appendChild(noteTitle);
 
-      const textZone = document.createElement("textarea");
-      textZone.className = "text-zone";
-      textZone.value = backedItem.content
-      note.appendChild(textZone);
+               const textZone = document.createElement("textarea");
+               textZone.className = "text-zone";
+               textZone.value = backedItem.content
+               note.appendChild(textZone);
 
-      if (interactionMode === INTERACTION_MODE_DRAG) {
-          note.style.left = backedItem.position.left;
-          note.style.top = backedItem.position.top;
-          enableDragForElement(note);
-      }
+               if (interactionMode === INTERACTION_MODE_DRAG) {
+                         note.style.left = backedItem.position.left;
+                         note.style.top = backedItem.position.top;
+                         enableDragForElement(note);
+               }
 
-     if (interactionMode === INTERACTION_MODE_DRAG) {
-          enableDragForElement(note);
-        } else {
-          enableSwapForElement(note);
-        }
-  board.appendChild(note);
+           if (interactionMode === INTERACTION_MODE_DRAG) {
+                         enableDragForElement(note);
+                    } else {
+                         enableSwapForElement(note);
+                    }
+     board.appendChild(note);
 
-    } else 
-      if (backedItem.type == 'note-list') {
-                const checklist = document.createElement("div");
-                checklist.className = "note-list";
+          } else 
+               if (backedItem.type == 'note-list') {
+                                        const checklist = document.createElement("div");
+                                        checklist.className = "note-list";
 
-               attachDeleteButton(checklist);
+                                    attachDeleteButton(checklist);
 
-                const listTitle = document.createElement("textarea");
-                listTitle.className = "list-title";
-                listTitle.value = backedItem.title
-                checklist.appendChild(listTitle);
+                                        const listTitle = document.createElement("textarea");
+                                        listTitle.className = "list-title";
+                                        listTitle.value = backedItem.title
+                                        checklist.appendChild(listTitle);
 
-                const addItemButton = document.createElement("button");
-                addItemButton.className = "add-item-button";
-                addItemButton.textContent = "Add item";
+                                        const addItemButton = document.createElement("button");
+                                        addItemButton.className = "add-item-button";
+                                        addItemButton.textContent = "Add item";
 
-                addItemButton.addEventListener("click", () => {
-                    const item = document.createElement("div");
-                    const checkBox = document.createElement("input");
-                    checkBox.className = "list-item-checkbox";
-                    checkBox.type = "checkbox";
-                  
+                                        addItemButton.addEventListener("click", () => {
+                                                  const item = document.createElement("div");
+                                                  const checkBox = document.createElement("input");
+                                                  checkBox.className = "list-item-checkbox";
+                                                  checkBox.type = "checkbox";
+                                             
 
-                    const input = document.createElement("input");
-                    input.className = "list-item-input";
-                    input.value = "New item";
+                                                  const input = document.createElement("input");
+                                                  input.className = "list-item-input";
+                                                  input.value = "New item";
 
-                    attachItemDeleteButton(item);
+                                                  attachItemDeleteButton(item);
 
-                    item.appendChild(checkBox);
-                    item.appendChild(input);
-                    checklist.appendChild(item);
-                });
+                                                  item.appendChild(checkBox);
+                                                  item.appendChild(input);
+                                                  checklist.appendChild(item);
+                                        });
 
-                checklist.appendChild(addItemButton);
+                                        checklist.appendChild(addItemButton);
 
-                backedItem.items.forEach(backedInput => {
-                  const item = document.createElement("div");
-                    const checkBox = document.createElement("input");
-                    checkBox.className = "list-item-checkbox";
-                    checkBox.type = "checkbox";
-                    checkBox.checked = backedInput.checked;
-                  
-                    const input = document.createElement("input");
-                    input.className = "list-item-input";
-                    input.value = backedInput.text;
+                                        backedItem.items.forEach(backedInput => {
+                                             const item = document.createElement("div");
+                                                  const checkBox = document.createElement("input");
+                                                  checkBox.className = "list-item-checkbox";
+                                                  checkBox.type = "checkbox";
+                                                  checkBox.checked = backedInput.checked;
+                                             
+                                                  const input = document.createElement("input");
+                                                  input.className = "list-item-input";
+                                                  input.value = backedInput.text;
 
-                    attachItemDeleteButton(item);
+                                                  attachItemDeleteButton(item);
 
-                    item.appendChild(checkBox);
-                    item.appendChild(input);
-                    checklist.appendChild(item);
-                })
+                                                  item.appendChild(checkBox);
+                                                  item.appendChild(input);
+                                                  checklist.appendChild(item);
+                                        })
 
-                if (interactionMode === INTERACTION_MODE_DRAG) {
-                  checklist.style.left = backedItem.position.left;
-                  checklist.style.top = backedItem.position.top;
-                  enableDragForElement(checklist);
-                } else {
-                  enableSwapForElement(checklist);
-                }
-                board.appendChild(checklist);
-                  }
-                })
+                                        if (interactionMode === INTERACTION_MODE_DRAG) {
+                                             checklist.style.left = backedItem.position.left;
+                                             checklist.style.top = backedItem.position.top;
+                                             enableDragForElement(checklist);
+                                        } else {
+                                             enableSwapForElement(checklist);
+                                        }
+                                        board.appendChild(checklist);
+                                             }
+                                        })
 
 }
 window.addEventListener("DOMContentLoaded", loadBoardFromStorage);
 
-// === Helper Buttons ===
+// === Complexe Buttons for the Notes ===
 
 function attachDeleteButton(element) {
-  const deleteButton = document.createElement("button");
-  deleteButton.className = "deleteButton";
-  deleteButton.textContent = "x";
-  deleteButton.onclick = () => {
-    element.remove();
-    saveBoardToStorage();
-  };
-  element.appendChild(deleteButton);
+     const deleteButton = document.createElement("button");
+     deleteButton.className = "deleteButton";
+     deleteButton.textContent = "x";
+     deleteButton.onclick = () => {
+          element.remove();
+          saveBoardToStorage();
+     };
+     element.appendChild(deleteButton);
 }
 
 function attachItemDeleteButton(element) {
-  const deleteButton = document.createElement("button");
-  deleteButton.className = "itemDeleteButton";
-  deleteButton.textContent = "x";
-  deleteButton.onclick = () => {
-    element.remove();
-    saveBoardToStorage();
-  };
-  element.appendChild(deleteButton);
+     const deleteButton = document.createElement("button");
+     deleteButton.className = "itemDeleteButton";
+     deleteButton.textContent = "x";
+     deleteButton.onclick = () => {
+          element.remove();
+          saveBoardToStorage();
+     };
+     element.appendChild(deleteButton);
+}
+
+// resizing logic
+function attachResizeHandle(element) {
+     const resizeHandle = document.createElement("div");
+     resizeHandle.className = "resize-handle";
+
+     let x1;
+     let y1; 
+     let originWidth;
+     let originHeight;
+     let x2;
+     let y2;
+
+     resizeHandle.addEventListener("mousedown", e => {
+
+          x1 = e.clientX;
+          y1 = e.clientY;
+          originWidth = parseInt(window.getComputedStyle(element).width, 10);
+          originHeight = parseInt(window.getComputedStyle(element).height, 10);
+          e.stopPropagation();
+          e.preventDefault();
+          document.addEventListener("mousemove", resizeElement);
+          document.addEventListener("mouseup", stopResize);
+     })
 }
 
 // === Dragging Logic ===
 function enableDragForElement(element) {
-  element.style.cursor = "grab";
+     element.style.cursor = "grab";
+     
+     
+     element.addEventListener("mousedown", e => {
+          if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
+               return;
+          }
+          e.preventDefault();
 
-  element.addEventListener("mousedown", e => {
-    if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
-      return;
-    }
+          element.style.position = "absolute";
+          document.body.style.userSelect = "none";
 
-    element.style.position = "absolute";
-    document.body.style.userSelect = "none";
+          isDragging = true;
+          lastDraggedElement = activeDraggedElement;
+          activeDraggedElement = element;
 
-    isDragging = true;
-    lastDraggedElement = activeDraggedElement;
-    activeDraggedElement = element;
+          // Raise z-index so dragged item stays on top
+          activeDraggedElement.style.zIndex = (parseInt(element.style.zIndex, 10) || 0) + 1000;
 
-    // Raise z-index so dragged item stays on top
-    activeDraggedElement.style.zIndex = (parseInt(element.style.zIndex, 10) || 0) + 1000;
+          mouseOffsetX = e.clientX - element.offsetLeft;
+          mouseOffsetY = e.clientY - element.offsetTop;
+          element.style.cursor = "grabbing";
 
-    mouseOffsetX = e.clientX - element.offsetLeft;
-    mouseOffsetY = e.clientY - element.offsetTop;
-    element.style.cursor = "grabbing";
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mouseup", onMouseUp);
+     });
 
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  });
+     function onMouseMove(e) {
+          if (isDragging && activeDraggedElement) {
+               const boardRect = board.getBoundingClientRect();
+               const elemRect = activeDraggedElement.getBoundingClientRect();
 
-  function onMouseMove(e) {
-    if (isDragging && activeDraggedElement) {
-      const boardRect = board.getBoundingClientRect();
-      const elemRect = activeDraggedElement.getBoundingClientRect();
+               let newLeft = e.clientX - mouseOffsetX;
+               let newTop = e.clientY - mouseOffsetY;
 
-      let newLeft = e.clientX - mouseOffsetX;
-      let newTop = e.clientY - mouseOffsetY;
+               // Keep inside board horizontally
+               if (newLeft < 0) newLeft = 0;
+               if (newLeft + elemRect.width > boardRect.width) {
+                    newLeft = boardRect.width - elemRect.width;
+               }
+               // Keep inside board vertically
+               if (newTop < 0) newTop = 0;
+               if (newTop + elemRect.height > boardRect.height) {
+                    newTop = boardRect.height - elemRect.height;
+               }
 
-      // Keep inside board horizontally
-      if (newLeft < 0) newLeft = 0;
-      if (newLeft + elemRect.width > boardRect.width) {
-        newLeft = boardRect.width - elemRect.width;
-      }
-      // Keep inside board vertically
-      if (newTop < 0) newTop = 0;
-      if (newTop + elemRect.height > boardRect.height) {
-        newTop = boardRect.height - elemRect.height;
-      }
+               // snappy drag vs free drag
+               if (dragMode === DRAG_MODE_GRID) {
+                    const gridSizeHeight = board.offsetHeight / 40;
+                    const gridSizeWidth = board.offsetWidth / 20;
+                    activeDraggedElement.style.left =
+                         Math.round((newLeft) / gridSizeWidth) * gridSizeWidth + "px";
+                    activeDraggedElement.style.top =
+                         Math.round((newTop) / gridSizeHeight) * gridSizeHeight + "px";
+               } else {
+                    activeDraggedElement.style.left = newLeft + "px";
+                    activeDraggedElement.style.top = newTop + "px";
+               }
+          }
+     }
 
-      // snappy drag vs free drag
-      if (dragMode === DRAG_MODE_GRID) {
-        const gridSizeHeight = board.offsetHeight / 40;
-        const gridSizeWidth = board.offsetWidth / 20;
-        activeDraggedElement.style.left =
-          Math.round((newLeft) / gridSizeWidth) * gridSizeWidth + "px";
-        activeDraggedElement.style.top =
-          Math.round((newTop) / gridSizeHeight) * gridSizeHeight + "px";
-      } else {
-        activeDraggedElement.style.left = newLeft + "px";
-        activeDraggedElement.style.top = newTop + "px";
-      }
-    }
-  }
+     function onMouseUp() {
+          if (activeDraggedElement && dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
+               const gridSize = 50;
+               const boardRect = board.getBoundingClientRect();
 
-  function onMouseUp() {
-    if (activeDraggedElement && dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
-      const gridSize = 50;
-      const boardRect = board.getBoundingClientRect();
+               let absLeft = parseInt(activeDraggedElement.style.left, 10);
+               let absTop = parseInt(activeDraggedElement.style.top, 10);
 
-      let absLeft = parseInt(activeDraggedElement.style.left, 10);
-      let absTop = parseInt(activeDraggedElement.style.top, 10);
+               let relLeft = absLeft - boardRect.left;
+               let relTop = absTop - boardRect.top;
 
-      let relLeft = absLeft - boardRect.left;
-      let relTop = absTop - boardRect.top;
+               relLeft = Math.round(relLeft / gridSize) * gridSize;
+               relTop = Math.round(relTop / gridSize) * gridSize;
 
-      relLeft = Math.round(relLeft / gridSize) * gridSize;
-      relTop = Math.round(relTop / gridSize) * gridSize;
+               relLeft = Math.max(0, Math.min(relLeft, boardRect.width - activeDraggedElement.offsetWidth));
+               relTop = Math.max(0, Math.min(relTop, boardRect.height - activeDraggedElement.offsetHeight));
 
-      relLeft = Math.max(0, Math.min(relLeft, boardRect.width - activeDraggedElement.offsetWidth));
-      relTop = Math.max(0, Math.min(relTop, boardRect.height - activeDraggedElement.offsetHeight));
+               activeDraggedElement.style.left = boardRect.left + relLeft + "px";
+               activeDraggedElement.style.top = boardRect.top + relTop + "px";
+               activeDraggedElement.style.cursor = "grab";
+          }
 
-      activeDraggedElement.style.left = boardRect.left + relLeft + "px";
-      activeDraggedElement.style.top = boardRect.top + relTop + "px";
-      activeDraggedElement.style.cursor = "grab";
-    }
+          document.body.style.userSelect = "auto";
+          isDragging = false;
+          activeDraggedElement = null;
 
-    document.body.style.userSelect = "auto";
-    isDragging = false;
-    activeDraggedElement = null;
+          document.removeEventListener("mousemove", onMouseMove);
+          document.removeEventListener("mouseup", onMouseUp);
 
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
-
-    saveBoardToStorage();
-  }
+          saveBoardToStorage();
+     }
 }
 
 // === Swapping Logic ===
 function enableSwapForElement(element) {
-  element.style.cursor = "grab";
+     element.style.cursor = "grab";
 
-  element.addEventListener("mousedown", e => {
-    if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
-      return;
-    }
+     element.addEventListener("mousedown", e => {
+          if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
+               return;
+          }
+          e.preventDefault();
+          activeSwappedElement = element;
+          element.style.opacity = "0.5";
+          document.body.style.userSelect = "none";
 
-    activeSwappedElement = element;
-    element.style.opacity = "0.5";
+          function onMouseMove(e) {
+               const overElement = document.elementFromPoint(e.clientX, e.clientY);
+               if (!overElement) return;
 
-    function onMouseMove(e) {
-      const overElement = document.elementFromPoint(e.clientX, e.clientY);
-      if (!overElement) return;
+               const overNote = overElement.closest(".note");
+               const overList = overElement.closest(".note-list");
+               const overTarget = overNote || overList;
 
-      const overNote = overElement.closest(".note");
-      const overList = overElement.closest(".note-list");
-      const overTarget = overNote || overList;
+               if (overTarget && overTarget !== activeSwappedElement) {
+                    const draggedIndex = Array.from(board.children).indexOf(activeSwappedElement);
+                    const overIndex = Array.from(board.children).indexOf(overTarget);
 
-      if (overTarget && overTarget !== activeSwappedElement) {
-        const draggedIndex = Array.from(board.children).indexOf(activeSwappedElement);
-        const overIndex = Array.from(board.children).indexOf(overTarget);
+                    if (draggedIndex < overIndex) {
+                         board.insertBefore(activeSwappedElement, overTarget.nextSibling);
+                    } else {
+                         board.insertBefore(activeSwappedElement, overTarget);
+                    }
+               }
+          }
 
-        if (draggedIndex < overIndex) {
-          board.insertBefore(activeSwappedElement, overTarget.nextSibling);
-        } else {
-          board.insertBefore(activeSwappedElement, overTarget);
-        }
-      }
-    }
+          function onMouseUp() {
+               activeSwappedElement.style.opacity = "1";
+               activeSwappedElement = null;
+               document.body.style.userSelect = "auto";
+               document.removeEventListener("mousemove", onMouseMove);
+               document.removeEventListener("mouseup", onMouseUp);
+               saveBoardToStorage();
+          }
 
-    function onMouseUp() {
-      activeSwappedElement.style.opacity = "1";
-      activeSwappedElement = null;
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-      saveBoardToStorage();
-    }
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  });
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mouseup", onMouseUp);
+     });
 }
 
 // === Action Buttons ===
 toggleDragModeButton.addEventListener("click", () => {
-  if (dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
-    dragMode = DRAG_MODE_FREE;
-    toggleDragModeButton.textContent = "Drag mode: free drag, no snap";
-  } else if (dragMode === DRAG_MODE_FREE) {
-    dragMode = DRAG_MODE_GRID;
-    toggleDragModeButton.textContent = "Drag mode: drag across grid";
-  } else if (dragMode === DRAG_MODE_GRID) {
-    dragMode = DRAG_MODE_SNAP_ON_RELEASE;
-    toggleDragModeButton.textContent = "Drag mode: free drag, snap on release";
-  }
+     if (dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
+          dragMode = DRAG_MODE_FREE;
+          toggleDragModeButton.textContent = "Drag mode: free drag, no snap";
+     } else if (dragMode === DRAG_MODE_FREE) {
+          dragMode = DRAG_MODE_GRID;
+          toggleDragModeButton.textContent = "Drag mode: drag across grid";
+     } else if (dragMode === DRAG_MODE_GRID) {
+          dragMode = DRAG_MODE_SNAP_ON_RELEASE;
+          toggleDragModeButton.textContent = "Drag mode: free drag, snap on release";
+     }
 });
 
 // Add Note Button
 addNoteButton.addEventListener("click", () => {
-  const note = document.createElement("div");
-  note.className = "note";
+     const note = document.createElement("div");
+     note.className = "note";
 
-  attachDeleteButton(note);
+     attachDeleteButton(note);
 
-  const noteTitle = document.createElement("textarea");
-  noteTitle.className = "note-title";
-  note.appendChild(noteTitle);
+     const noteTitle = document.createElement("textarea");
+     noteTitle.className = "note-title";
+     note.appendChild(noteTitle);
 
-  const textZone = document.createElement("textarea");
-  textZone.className = "text-zone";
-  note.appendChild(textZone);
+     const textZone = document.createElement("textarea");
+     textZone.className = "text-zone";
+     note.appendChild(textZone);
 
-  if (interactionMode === INTERACTION_MODE_DRAG) {
-    enableDragForElement(note);
-  } else {
-    enableSwapForElement(note);
-  }
-  board.appendChild(note);
-  saveBoardToStorage();
+     if (interactionMode === INTERACTION_MODE_DRAG) {
+          enableDragForElement(note);
+     } else {
+          enableSwapForElement(note);
+     }
+     board.appendChild(note);
+     saveBoardToStorage();
 });
 
 // Add Checklist Button
 addChecklistButton.addEventListener("click", () => {
-  const checklist = document.createElement("div");
-  checklist.className = "note-list";
+     const checklist = document.createElement("div");
+     checklist.className = "note-list";
 
-  attachDeleteButton(checklist);
+     attachDeleteButton(checklist);
 
-  const listTitle = document.createElement("textarea");
-  listTitle.className = "list-title";
-  checklist.appendChild(listTitle);
+     const listTitle = document.createElement("textarea");
+     listTitle.className = "list-title";
+     checklist.appendChild(listTitle);
 
-  const addItemButton = document.createElement("button");
-  addItemButton.className = "add-item-button";
-  addItemButton.textContent = "Add item";
+     const addItemButton = document.createElement("button");
+     addItemButton.className = "add-item-button";
+     addItemButton.textContent = "Add item";
 
-  addItemButton.addEventListener("click", () => {
-      const item = document.createElement("div");
-      const checkBox = document.createElement("input");
-      checkBox.className = "list-item-checkbox";
-      checkBox.type = "checkbox";
+     addItemButton.addEventListener("click", () => {
+               const item = document.createElement("div");
+               const checkBox = document.createElement("input");
+               checkBox.className = "list-item-checkbox";
+               checkBox.type = "checkbox";
 
-      const input = document.createElement("input");
-      input.className = "list-item-input";
-      input.value = "New item";
+               const input = document.createElement("input");
+               input.className = "list-item-input";
+               input.value = "New item";
 
-      attachItemDeleteButton(item);
+               attachItemDeleteButton(item);
 
-      item.appendChild(checkBox);
-      item.appendChild(input);
-      checklist.appendChild(item);
-      saveBoardToStorage();
-  });
+               item.appendChild(checkBox);
+               item.appendChild(input);
+               checklist.appendChild(item);
+               saveBoardToStorage();
+     });
 
-  checklist.appendChild(addItemButton);
-  if (interactionMode === INTERACTION_MODE_DRAG) {
-    enableDragForElement(checklist);
-  } else {
-    enableSwapForElement(checklist);
-  }
-  board.appendChild(checklist);
-  saveBoardToStorage();
+     checklist.appendChild(addItemButton);
+     if (interactionMode === INTERACTION_MODE_DRAG) {
+          enableDragForElement(checklist);
+     } else {
+          enableSwapForElement(checklist);
+     }
+     board.appendChild(checklist);
+     saveBoardToStorage();
 });
 
 // Saves after the user types or checks a box
 
 document.addEventListener("input", e => {
-  if (e.target.matches(".note-title, .list-title, .text-zone, .list-item-input")) {
-    debounceSave();
-  }
+     if (e.target.matches(".note-title, .list-title, .text-zone, .list-item-input")) {
+          debounceSave();
+     }
 });
 document.addEventListener("change", e => {
-  if (e.target.matches(".list-item-checkbox")) {
-    debounceSave();
-  }
+     if (e.target.matches(".list-item-checkbox")) {
+          debounceSave();
+     }
 });
 
 // Swap Mode Button
 toggleInteractionModeButton.addEventListener("click", () => {
-  saveBoardToStorage();
-  Array.from(board.children).forEach(x => x.remove());
-  board.innerHTML = "";
-  if (interactionMode === INTERACTION_MODE_DRAG) {
-    interactionMode = INTERACTION_MODE_SWAP;
-    toggleInteractionModeButton.textContent = "Mode: swap";
-    loadBoardFromStorage();
-  } else {
-    interactionMode = INTERACTION_MODE_DRAG;
-    toggleInteractionModeButton.textContent = "Mode: drag";
-    loadBoardFromStorage();
-  }
+     saveBoardToStorage();
+     Array.from(board.children).forEach(x => x.remove());
+     board.innerHTML = "";
+     if (interactionMode === INTERACTION_MODE_DRAG) {
+          interactionMode = INTERACTION_MODE_SWAP;
+          toggleInteractionModeButton.textContent = "Mode: swap";
+          loadBoardFromStorage();
+     } else {
+          interactionMode = INTERACTION_MODE_DRAG;
+          toggleInteractionModeButton.textContent = "Mode: drag";
+          loadBoardFromStorage();
+     }
 });
