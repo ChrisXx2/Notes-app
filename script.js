@@ -43,6 +43,8 @@ function saveBoardToStorage() {
           title: note.querySelector('.note-title')?.value || "Untitled",
           content: note.querySelector('.text-zone')?.value || "",
           position: { left: note.style.left, top: note.style.top },
+          width: note.style.width,
+          height: note.style.height,
           color: note.style.background || "#fffdf5"
      }));
 
@@ -54,6 +56,8 @@ function saveBoardToStorage() {
                     checked: item.querySelector(".list-item-checkbox")?.checked || false
                })),
           position: { left: list.style.left, top: list.style.top },
+          width: list.style.width,
+          height: list.style.height,
           color: list.style.background || "#fffdf5"
      }));
 
@@ -102,13 +106,15 @@ function loadBoardFromStorage() {
                          enableDragForElement(note);
                }
 
-           if (interactionMode === INTERACTION_MODE_DRAG) {
+          if (interactionMode === INTERACTION_MODE_DRAG) {
                          enableDragForElement(note);
                     } else {
                          enableSwapForElement(note);
                     }
-     board.appendChild(note);
-
+          note.style.width = backedItem.width;
+          note.style.height = backedItem.height;
+          attachResizeHandle(note);
+          board.appendChild(note);
           } else 
                if (backedItem.type == 'note-list') {
                                         const checklist = document.createElement("div");
@@ -161,6 +167,7 @@ function loadBoardFromStorage() {
                                                   item.appendChild(checkBox);
                                                   item.appendChild(input);
                                                   checklist.appendChild(item);
+
                                         })
 
                                         if (interactionMode === INTERACTION_MODE_DRAG) {
@@ -170,6 +177,7 @@ function loadBoardFromStorage() {
                                         } else {
                                              enableSwapForElement(checklist);
                                         }
+                                        attachResizeHandle(checklist);
                                         board.appendChild(checklist);
                                              }
                                         })
@@ -208,22 +216,39 @@ function attachResizeHandle(element) {
 
      let x1;
      let y1; 
-     let originWidth;
-     let originHeight;
-     let x2;
-     let y2;
+     let originalWidth;
+     let originalHeight;
 
      resizeHandle.addEventListener("mousedown", e => {
 
           x1 = e.clientX;
           y1 = e.clientY;
-          originWidth = parseInt(window.getComputedStyle(element).width, 10);
-          originHeight = parseInt(window.getComputedStyle(element).height, 10);
+          originalWidth = parseInt(window.getComputedStyle(element).width, 10);
+          originalHeight = parseInt(window.getComputedStyle(element).height, 10);
           e.stopPropagation();
           e.preventDefault();
           document.addEventListener("mousemove", resizeElement);
           document.addEventListener("mouseup", stopResize);
      })
+
+     function resizeElement(e) {
+          const newWidth = originalWidth + (e.clientX - x1);
+          const newHeight = originalHeight + (e.clientY - y1);
+          if (newWidth >= minWidth && newWidth <= maxWidth) {
+               element.style.width = newWidth + "px";
+          }
+          if (newHeight >= minHeight && newHeight <= maxHeight) {
+               element.style.height = newHeight + "px";
+          }
+
+     }
+     function stopResize(e){
+          document.removeEventListener("mousemove", resizeElement);
+          document.removeEventListener("mouseup", stopResize);
+          saveBoardToStorage();
+     }
+
+     element.appendChild(resizeHandle);
 }
 
 // === Dragging Logic ===
@@ -397,6 +422,7 @@ addNoteButton.addEventListener("click", () => {
      const textZone = document.createElement("textarea");
      textZone.className = "text-zone";
      note.appendChild(textZone);
+        attachResizeHandle(note);
 
      if (interactionMode === INTERACTION_MODE_DRAG) {
           enableDragForElement(note);
@@ -441,6 +467,7 @@ addChecklistButton.addEventListener("click", () => {
      });
 
      checklist.appendChild(addItemButton);
+        attachResizeHandle(checklist);
      if (interactionMode === INTERACTION_MODE_DRAG) {
           enableDragForElement(checklist);
      } else {
