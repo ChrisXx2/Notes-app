@@ -234,3 +234,10 @@ button:hover {
 .resize-handle:hover {
      background: rgba(0, 0, 0, 0.4);
 }
+#color-picker-input {
+width: 45px;
+height: 30px;
+border: none;
+padding: 0;
+cursor: pointer;
+}

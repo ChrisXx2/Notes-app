@@ -13,6 +13,9 @@ const addNoteButton = document.getElementById("add-note");
 const addChecklistButton = document.getElementById("add-checklist");
 const toggleDragModeButton = document.getElementById("toggle-snap");
 const toggleInteractionModeButton = document.getElementById("card-swap-mode");
+const toggleResizeButton = document.getElementById("toggle-resize");
+const colorInput = document.getElementById("color-picker-input");
+const confirmColorButton = document.getElementById("confirm-color");
 
 // === State Variables ===
 let allowDragWhileEditing = true;
@@ -27,6 +30,9 @@ let mouseOffsetY = 0;
 let dragMode = DRAG_MODE_FREE;
 let interactionMode = INTERACTION_MODE_DRAG;
 
+// let settingsOpen = false;
+let resizeEnabled = true;
+
 const minWidth = 120;
 const minHeight = 80;
 const maxWidth = 600;
@@ -39,7 +45,7 @@ let saveTimeout;
 // === Local Storage ===
 function saveBoardToStorage() {
      const notes = Array.from(board.querySelectorAll('.note')).map(note => ({
-          type: note.className,
+          type: "note",
           title: note.querySelector('.note-title')?.value || "Untitled",
           content: note.querySelector('.text-zone')?.value || "",
           position: { left: note.style.left, top: note.style.top },
@@ -49,9 +55,9 @@ function saveBoardToStorage() {
      }));
 
      const lists = Array.from(board.querySelectorAll('.note-list')).map(list => ({
-          type: list.className,
+          type: "note-list",
           title: list.querySelector('.list-title')?.value || "Untitled",
-          items: Array.from(list.querySelectorAll("div")).map(item => ({
+          items: Array.from(list.querySelectorAll(".checklist-item")).map(item => ({
                     text: item.querySelector(".list-item-input")?.value || "",
                     checked: item.querySelector(".list-item-checkbox")?.checked || false
                })),
@@ -100,87 +106,87 @@ function loadBoardFromStorage() {
                textZone.value = backedItem.content
                note.appendChild(textZone);
 
+               note.style.background = backedItem.color;
+
                if (interactionMode === INTERACTION_MODE_DRAG) {
                          note.style.left = backedItem.position.left;
                          note.style.top = backedItem.position.top;
                          enableDragForElement(note);
-               }
-
-          if (interactionMode === INTERACTION_MODE_DRAG) {
-                         enableDragForElement(note);
-                    } else {
+               } else {
                          enableSwapForElement(note);
-                    }
+               }
           note.style.width = backedItem.width;
           note.style.height = backedItem.height;
           attachResizeHandle(note);
           board.appendChild(note);
           } else 
                if (backedItem.type == 'note-list') {
-                                        const checklist = document.createElement("div");
-                                        checklist.className = "note-list";
+                         const checklist = document.createElement("div");
+                         checklist.className = "note-list";
 
-                                    attachDeleteButton(checklist);
+                         attachDeleteButton(checklist);
 
-                                        const listTitle = document.createElement("textarea");
-                                        listTitle.className = "list-title";
-                                        listTitle.value = backedItem.title
-                                        checklist.appendChild(listTitle);
+                         const listTitle = document.createElement("textarea");
+                         listTitle.className = "list-title";
+                         listTitle.value = backedItem.title
+                         checklist.appendChild(listTitle);
 
-                                        const addItemButton = document.createElement("button");
-                                        addItemButton.className = "add-item-button";
+                         const addItemButton = document.createElement("button");
+                         addItemButton.className = "add-item-button";
                                         addItemButton.textContent = "Add item";
 
-                                        addItemButton.addEventListener("click", () => {
-                                                  const item = document.createElement("div");
-                                                  const checkBox = document.createElement("input");
-                                                  checkBox.className = "list-item-checkbox";
-                                                  checkBox.type = "checkbox";
+                         addItemButton.addEventListener("click", () => {
+                                   const item = document.createElement("div");
+                                   const checkBox = document.createElement("input");
+                                   checkBox.className = "list-item-checkbox";
+                                   checkBox.type = "checkbox";
                                              
 
-                                                  const input = document.createElement("input");
-                                                  input.className = "list-item-input";
-                                                  input.value = "New item";
+                                   const input = document.createElement("input");
+                                   input.className = "list-item-input";
+                                   input.value = "New item";
 
-                                                  attachItemDeleteButton(item);
+                                   attachItemDeleteButton(item);
 
-                                                  item.appendChild(checkBox);
-                                                  item.appendChild(input);
-                                                  checklist.appendChild(item);
-                                        });
+                                   item.appendChild(checkBox);
+                                   item.appendChild(input);
+                                   checklist.appendChild(item);
+                         });
 
-                                        checklist.appendChild(addItemButton);
+                         checklist.appendChild(addItemButton);
 
-                                        backedItem.items.forEach(backedInput => {
-                                             const item = document.createElement("div");
-                                                  const checkBox = document.createElement("input");
-                                                  checkBox.className = "list-item-checkbox";
-                                                  checkBox.type = "checkbox";
-                                                  checkBox.checked = backedInput.checked;
+                         backedItem.items.forEach(backedInput => {
+                              const item = document.createElement("div");
+                                   const checkBox = document.createElement("input");
+                                   checkBox.className = "list-item-checkbox";
+                                   checkBox.type = "checkbox";
+                                   checkBox.checked = backedInput.checked;
                                              
-                                                  const input = document.createElement("input");
-                                                  input.className = "list-item-input";
-                                                  input.value = backedInput.text;
+                                   const input = document.createElement("input");
+                                   input.className = "list-item-input";
+                                   input.value = backedInput.text;
 
-                                                  attachItemDeleteButton(item);
+                                   attachItemDeleteButton(item);
 
-                                                  item.appendChild(checkBox);
-                                                  item.appendChild(input);
-                                                  checklist.appendChild(item);
+                                   item.appendChild(checkBox);
+                                   item.appendChild(input);
+                                   checklist.appendChild(item);
 
-                                        })
+                         })
 
-                                        if (interactionMode === INTERACTION_MODE_DRAG) {
-                                             checklist.style.left = backedItem.position.left;
-                                             checklist.style.top = backedItem.position.top;
-                                             enableDragForElement(checklist);
-                                        } else {
-                                             enableSwapForElement(checklist);
-                                        }
-                                        attachResizeHandle(checklist);
-                                        board.appendChild(checklist);
-                                             }
-                                        })
+                         checklist.style.background = backedItem.color;
+
+                         if (interactionMode === INTERACTION_MODE_DRAG) {
+                              checklist.style.left = backedItem.position.left;
+                              checklist.style.top = backedItem.position.top;
+                              enableDragForElement(checklist);
+                         } else {
+                              enableSwapForElement(checklist);
+                         }
+                         attachResizeHandle(checklist);
+                         board.appendChild(checklist);
+                         }
+                    })
 
 }
 window.addEventListener("DOMContentLoaded", loadBoardFromStorage);
@@ -234,10 +240,10 @@ function attachResizeHandle(element) {
      function resizeElement(e) {
           const newWidth = originalWidth + (e.clientX - x1);
           const newHeight = originalHeight + (e.clientY - y1);
-          if (newWidth >= minWidth && newWidth <= maxWidth) {
+          if (newWidth >= minWidth && newWidth <= maxWidth && resizeEnabled == true) {
                element.style.width = newWidth + "px";
           }
-          if (newHeight >= minHeight && newHeight <= maxHeight) {
+          if (newHeight >= minHeight && newHeight <= maxHeight && resizeEnabled == true) {
                element.style.height = newHeight + "px";
           }
 
@@ -257,7 +263,7 @@ function enableDragForElement(element) {
      
      
      element.addEventListener("mousedown", e => {
-          if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
+          if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") && allowDragWhileEditing) {
                return;
           }
           e.preventDefault();
@@ -266,7 +272,6 @@ function enableDragForElement(element) {
           document.body.style.userSelect = "none";
 
           isDragging = true;
-          lastDraggedElement = activeDraggedElement;
           activeDraggedElement = element;
 
           // Raise z-index so dragged item stays on top
@@ -338,6 +343,7 @@ function enableDragForElement(element) {
 
           document.body.style.userSelect = "auto";
           isDragging = false;
+          lastDraggedElement = activeDraggedElement;
           activeDraggedElement = null;
 
           document.removeEventListener("mousemove", onMouseMove);
@@ -432,6 +438,30 @@ addNoteButton.addEventListener("click", () => {
      board.appendChild(note);
      saveBoardToStorage();
 });
+
+toggleResizeButton.addEventListener("click", () => {
+     if (resizeEnabled == true){
+          resizeEnabled = false;
+          toggleResizeButton.textContent = "resize notes: off";
+          saveBoardToStorage();
+     } else {
+          resizeEnabled = true;
+          toggleResizeButton.textContent = "resize notes: on";
+          saveBoardToStorage();
+     }
+})
+
+confirmColorButton.addEventListener("click", () => {
+
+     if (lastDraggedElement) {
+          console.log("note found")
+          lastDraggedElement.style.background = colorInput.value;
+          saveBoardToStorage();
+     } else {
+          console.log("No note previously selected");
+     }
+
+})
 
 // Add Checklist Button
 addChecklistButton.addEventListener("click", () => {
