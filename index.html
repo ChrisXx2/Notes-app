@@ -8,27 +8,36 @@
                     <title>Notes App</title>
           </head>
 
-          <body>
+  <body>
 
-                    <header>[header]</header>
-                    <div id="top-section"></div>
-                    <button id="add-note">add text note</button>
-                    <button id="add-checklist">add checklist</button>
-                    <button id="toggle-snap">Drag mode: Free drag, no snap</button>
-                    <button id="card-swap-mode">Mode: drag</button>
-                    <div id="board"></div>
-                    <div id="note-settings">
-                              <p>note customization</p>
-                              <button id="toggle-resize">resize notes: on</button>
-                              <div id="color-picker">
-                                <p>change note color</p>
-                                <input id="color-picker-input" type="color">
-                                <button id="confirm-color">confirm</button>
-                              </div>
-                    </div>
-                    <script src="script.js"></script>
+  <header id="settings-panel">
+    <h1>Pinboard Settings</h1>
 
-          </body>
+      <div class="settings-group">
+        <button id="add-note">Add Note</button>
+        <button id="add-checklist">Add Checklist</button>
+      </div>
+
+      <div class="settings-group">
+        <button id="toggle-snap">Toggle Mode</button>
+        <button id="toggle-resize">resize notes: on</button>
+        <button id="clear-board">Delete All</button>
+        <button id="card-swap-mode">Mode: drag</button>
+      </div>
+
+      <div class="settings-group">
+        <label>Note Color</label>
+        <input id="color-picker-input" type="color" />
+        <button id="confirm-color">confirm</button>
+      </div>
+    </header>
+
+                
+        <div id="board"></div>
+
+        <script src="script.js"></script>
+
+    </body>
 
 
 </html>

@@ -243,7 +243,7 @@ function attachResizeHandle(element) {
           if (newWidth >= minWidth && newWidth <= maxWidth && resizeEnabled == true) {
                element.style.width = newWidth + "px";
           }
-          if (newHeight >= minHeight && newHeight <= maxHeight && resizeEnabled == true) {
+          if (newHeight >= minHeight && newHeight <= maxHeight && resizeEnabled == true && element.className !== "note-list") {
                element.style.height = newHeight + "px";
           }
 
