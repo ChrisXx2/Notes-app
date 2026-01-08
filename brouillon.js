@@ -1,6 +1,6 @@
-// alternate universe... for now 👀
+// alternate universe... for now (o)_(0)
 // this is just a draft place
-//actual draft is the chaos in my notebook rn 🥲
+//actual draft is the chaos in my notebook rn ;-v(
 
 // Right now I'll be trying to improve the note and list creation scripts
 
@@ -17,10 +17,10 @@ function createNote(title, text, visible) {
 
      const textZone = document.createElement("textarea");
      textZone.className = "text-zone";
-     textZOne.value = text;
+     textZone.value = text;
      note.appendChild(textZone);
      
-if (visible == true) {
+if (visible === true) {
     attachResizeHandle(note);
     if (interactionMode === INTERACTION_MODE_DRAG) {
         enableDragForElement(note);
@@ -38,7 +38,7 @@ else {
      saveBoardToStorage();
 }
 
-function createChecklist() {
+function createChecklist(title, itemsArray, visible) {
     const checklist = document.createElement("div");
     checklist.className = "note-list";
 
@@ -46,6 +46,7 @@ function createChecklist() {
 
     const listTitle = document.createElement("textarea");
     listTitle.className = "list-title";
+    listTitle.value = title;
     checklist.appendChild(listTitle);
 
     const addItemButton = document.createElement("button");
@@ -71,12 +72,35 @@ function createChecklist() {
     });
 
     checklist.appendChild(addItemButton);
-        attachResizeHandle(checklist);
+    itemsArray.items.forEach(backedInput => {
+        const item = document.createElement("div");
+        const checkBox = document.createElement("input");
+        checkBox.className = "list-item-checkbox";
+        checkBox.type = "checkbox";
+        checkBox.checked = backedInput.checked;
+                                             
+        const input = document.createElement("input");
+        input.className = "list-item-input";
+        input.value = backedInput.text;
+
+        attachItemDeleteButton(item);
+        item.appendChild(checkBox);
+        item.appendChild(input);
+        checklist.appendChild(item);
+    });
+if (visible === true) {
+    attachResizeHandle(checklist);
     if (interactionMode === INTERACTION_MODE_DRAG) {
-          enableDragForElement(checklist);
-    } else {
-          enableSwapForElement(checklist);
+        enableDragForElement(checklist);
     }
+    else {
+        enableSwapForElement(checklist);
+    }
+}
+else {
+    checklist.style.width = 0;
+    checklist.style.height = 0;
+}
     board.appendChild(checklist);
     saveBoardToStorage();
 }
