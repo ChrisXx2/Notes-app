@@ -11,30 +11,36 @@
   <body>
 
   <header id="settings-panel">
-    <h1>Pinboard Settings</h1>
+  <h1>Pinboard Settings</h1>
 
-      <div class="settings-group">
-        <button id="add-note">Add Note</button>
-        <button id="add-checklist">Add Checklist</button>
-      </div>
+  <div class="settings-group">
+    <button id="add-note" aria-label="Add a new note">Add Note</button>
+    <button id="add-checklist" aria-label="Add a new checklist">Add Checklist</button>
+  </div>
 
-      <div class="settings-group">
-        <button id="toggle-snap">Toggle Mode</button>
-        <button id="toggle-resize">resize notes: on</button>
-        <button id="clear-board">Delete All</button>
-        <button id="card-swap-mode">Mode: drag</button>
-      </div>
-      <div class="settings-group">
-        <input id="search-bar">
-        <button id="search-button">search</button>
-      </div>
+  <div class="settings-group">
+    <button id="toggle-snap" aria-label="Toggle drag mode">Toggle Mode</button>
+    <button id="toggle-resize" aria-label="Toggle note resizing">resize notes: on</button>
+    <button id="clear-board" aria-label="Delete all notes and checklists">Delete All</button>
+    <button id="card-swap-mode" aria-label="Toggle between drag and swap mode">Mode: drag</button>
+  </div>
 
-      <div class="settings-group">
-        <label>Note Color</label>
-        <input id="color-picker-input" type="color" />
-        <button id="confirm-color">confirm</button>
-      </div>
-    </header>
+  <div class="settings-group">
+    <label for="search-bar">Search:</label>
+    <input id="search-bar" 
+           aria-label="Search notes and checklists" 
+           placeholder="Search...">
+    <button id="search-button" aria-label="Execute search">search</button>
+  </div>
+
+  <div class="settings-group">
+    <label for="color-picker-input">Note Color:</label>
+    <input id="color-picker-input" 
+           type="color" 
+           aria-label="Choose note color" />
+    <button id="confirm-color" aria-label="Apply color to last selected note">confirm</button>
+  </div>
+</header>
 
                 
         <div id="board"></div>

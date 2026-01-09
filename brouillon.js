@@ -4,8 +4,10 @@
 
 // Right now I'll be trying to improve the note and list creation scripts
 
-function createNote(title, text, visible) {
-    const note = document.createElement("div");
+//creates note
+function createNote(backedItem, title, text, isNew) {
+     let visible = false;
+     const note = document.createElement("div");
      note.className = "note";
 
      attachDeleteButton(note);
@@ -19,8 +21,21 @@ function createNote(title, text, visible) {
      textZone.className = "text-zone";
      textZone.value = text;
      note.appendChild(textZone);
-     
+
+if (textZone.value.includes(currentSearchTerm) || noteTitle.value.includes(currentSearchTerm) || currentSearchTerm == "") { visible = true;} else { visible = false;}
+
+if ((!isNew || isNew !== true) && interactionMode === INTERACTION_MODE_DRAG) {
+     note.style.left = backedItem.position.left;
+     note.style.top = backedItem.position.top;
+     note.style.position = "absolute";
+
+     if (backedItem.width) note.style.width = backedItem.width;
+     if (backedItem.height) note.style.height = backedItem.height;
+     if (backedItem.color) note.style.background = backedItem.color;
+}
+
 if (visible === true) {
+     console.log("note visible")
     attachResizeHandle(note);
     if (interactionMode === INTERACTION_MODE_DRAG) {
         enableDragForElement(note);
@@ -30,17 +45,24 @@ if (visible === true) {
     }
 }
 else {
-    note.style.width = 0;
-    note.style.height = 0;
+     console.log("note hidden")
+    note.style.display = "none";
 }
 
      board.appendChild(note);
-     saveBoardToStorage();
+//     if (isNew && isNew === true) saveBoardToStorage();
 }
 
-function createChecklist(title, itemsArray, visible) {
-    const checklist = document.createElement("div");
-    checklist.className = "note-list";
+//creates checklist
+function createChecklist(backedItem, title, itemsArray, isNew) {
+
+     let visible = false;
+     if (title.includes(currentSearchTerm) || currentSearchTerm === ""){
+               visible = true;
+     }
+
+     const checklist = document.createElement("div");
+     checklist.className = "note-list";
 
     attachDeleteButton(checklist);
 
@@ -55,6 +77,7 @@ function createChecklist(title, itemsArray, visible) {
 
     addItemButton.addEventListener("click", () => {
                const item = document.createElement("div");
+               item.className = "checklist-item";
                const checkBox = document.createElement("input");
                checkBox.className = "list-item-checkbox";
                checkBox.type = "checkbox";
@@ -72,23 +95,57 @@ function createChecklist(title, itemsArray, visible) {
     });
 
     checklist.appendChild(addItemButton);
-    itemsArray.items.forEach(backedInput => {
-        const item = document.createElement("div");
-        const checkBox = document.createElement("input");
-        checkBox.className = "list-item-checkbox";
-        checkBox.type = "checkbox";
-        checkBox.checked = backedInput.checked;
-                                             
-        const input = document.createElement("input");
-        input.className = "list-item-input";
-        input.value = backedInput.text;
 
-        attachItemDeleteButton(item);
-        item.appendChild(checkBox);
-        item.appendChild(input);
-        checklist.appendChild(item);
+    if (typeof itemsArray === "undefined" || !itemsArray.items) {
+          console.log("no items found in checklist")
+
+     } else {
+          itemsArray.items.forEach(backedInput => {
+          if (backedInput.text.includes(currentSearchTerm)){
+               visible = true;
+          }
+          const item = document.createElement("div");
+          const checkBox = document.createElement("input");
+          checkBox.className = "list-item-checkbox";
+          checkBox.type = "checkbox";
+          checkBox.checked = backedInput.checked;
+                                             
+          const input = document.createElement("input");
+          input.className = "list-item-input";
+          input.value = backedInput.text;
+
+          attachItemDeleteButton(item);
+          item.appendChild(checkBox);
+          item.appendChild(input);
+          checklist.appendChild(item);
     });
+
+    applyStoredStyles(isNew, interactionMode, checklist, backedItem, visible, currentSearchTerm);
+
+}
+    board.appendChild(checklist);
+//    if (isNew && isNew === true) saveBoardToStorage();
+}
+
+//standardize styles for notes and checklists
+
+function applyStoredStyles(isNew, interactionMode, element, backedItem, visible, currentSearchTerm) {
+
+   if ((!isNew || isNew !== true) && interactionMode === INTERACTION_MODE_DRAG) {
+     element.style.left = backedItem.position.left;
+     element.style.top = backedItem.position.top;
+     element.style.position = "absolute";
+
+     if (backedItem.width) element.style.width = backedItem.width;
+     if (backedItem.height) element.style.height = backedItem.height;
+     if (backedItem.color) element.style.background = backedItem.color;
+}
+if (currentSearchTerm === ""){
+               visible = true;
+}
+
 if (visible === true) {
+     console.log("checklist visible")
     attachResizeHandle(checklist);
     if (interactionMode === INTERACTION_MODE_DRAG) {
         enableDragForElement(checklist);
@@ -98,9 +155,8 @@ if (visible === true) {
     }
 }
 else {
-    checklist.style.width = 0;
-    checklist.style.height = 0;
+     console.log("checklist hidden")
+     checklist.style.display = "none";
 }
-    board.appendChild(checklist);
-    saveBoardToStorage();
+
 }

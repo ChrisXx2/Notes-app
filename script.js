@@ -51,34 +51,39 @@ let currentSearchTerm = "";
 // === Local Storage ===
 
 function saveBoardToStorage() {
-     const notes = Array.from(board.querySelectorAll('.note')).map(note => ({
-          type: "note",
-          title: note.querySelector('.note-title')?.value || "Untitled",
-          content: note.querySelector('.text-zone')?.value || "",
-          position: { left: note.style.left, top: note.style.top },
-          width: note.style.width,
-          height: note.style.height,
-          color: note.style.background || "#fffdf5",
-          tag: note.querySelector('.tag')?.value || "none",
-     }));
+  try {
+    const notes = Array.from(board.querySelectorAll('.note')).map(note => ({
+      type: "note",
+      title: note.querySelector('.note-title')?.value || "Untitled",
+      content: note.querySelector('.text-zone')?.value || "",
+      position: { left: note.style.left, top: note.style.top },
+      width: note.style.width,
+      height: note.style.height,
+      color: note.style.background || "#fffdf5",
+      tag: note.querySelector('.tag')?.value || "none",
+    }));
 
-     const lists = Array.from(board.querySelectorAll('.note-list')).map(list => ({
-          type: "note-list",
-          title: list.querySelector('.list-title')?.value || "Untitled",
-          items: Array.from(list.querySelectorAll(".checklist-item")).map(item => ({
-                    text: item.querySelector(".list-item-input")?.value || "",
-                    checked: item.querySelector(".list-item-checkbox")?.checked || false
-               })),
-          position: { left: list.style.left, top: list.style.top },
-          width: list.style.width,
-          height: list.style.height,
-          color: list.style.background || "#fffdf5",
-          tag: list.querySelector('.tag')?.value || "none"
-     }));
+    const lists = Array.from(board.querySelectorAll('.note-list')).map(list => ({
+      type: "note-list",
+      title: list.querySelector('.list-title')?.value || "Untitled",
+      items: Array.from(list.querySelectorAll(".checklist-item")).map(item => ({
+        text: item.querySelector(".list-item-input")?.value || "",
+        checked: item.querySelector(".list-item-checkbox")?.checked || false
+      })),
+      position: { left: list.style.left, top: list.style.top },
+      width: list.style.width,
+      height: list.style.height,
+      color: list.style.background || "#fffdf5",
+      tag: list.querySelector('.tag')?.value || "none"
+    }));
 
-     const allItems = [...notes, ...lists];
-     localStorage.setItem("currentBoard", JSON.stringify(allItems));
- console.log("saved")
+    const allItems = [...notes, ...lists];
+    localStorage.setItem("currentBoard", JSON.stringify(allItems));
+    console.log("Board saved successfully");
+  } catch (error) {
+    console.error("Failed to save board:", error);
+    alert("Failed to save your changes. Check console for details.");
+  }
 }
 
 function debounceSave() {
@@ -92,21 +97,25 @@ function debounceSave() {
 }
 
 function loadBoardFromStorage() {
-     const savedNotes = localStorage.getItem("currentBoard");
-     if (!savedNotes) return;
+  try {
+    const savedNotes = localStorage.getItem("currentBoard");
+    if (!savedNotes) return;
+    
+    const allItems = JSON.parse(savedNotes);
+    board.innerHTML = "";
 
-     const allItems = JSON.parse(savedNotes);
-     board.innerHTML = "";
-
-     allItems.forEach(backedItem => {
-          if (backedItem.type === 'note') {
-               createNote(backedItem, backedItem.title, backedItem.content, false);
-          } else
-               if (backedItem.type === 'note-list') {
-                    createChecklist(backedItem, backedItem.title, {items: backedItem.items}, false);
-               }
-          })
-
+    allItems.forEach(backedItem => {
+      if (backedItem.type === 'note') {
+        createNote(backedItem, backedItem.title, backedItem.content, false);
+      } else if (backedItem.type === 'note-list') {
+        createChecklist(backedItem, backedItem.title, {items: backedItem.items}, false);
+      }
+    });
+  } catch (error) {
+    console.error("Failed to load board from storage:", error);
+    alert("Failed to load saved notes. Starting with a clean board.");
+    localStorage.removeItem("currentBoard")
+  }
 }
 window.addEventListener("DOMContentLoaded", loadBoardFromStorage);
 
@@ -175,6 +184,43 @@ function attachResizeHandle(element) {
 
      element.appendChild(resizeHandle);
 }
+
+//standard style rules for notes and checklists
+
+function applyStoredStyles(title, isNew, interactionMode, element, backedItem, visible, currentSearchTerm) {
+
+   if ((!isNew || isNew !== true) && interactionMode === INTERACTION_MODE_DRAG) {
+     element.style.left = backedItem.position.left;
+     element.style.top = backedItem.position.top;
+     element.style.position = "absolute";
+
+     if (backedItem.width) element.style.width = backedItem.width;
+     if (backedItem.height) element.style.height = backedItem.height;
+     if (backedItem.color) element.style.background = backedItem.color;
+}    else {
+         lastDraggedElement = element;
+}
+if (currentSearchTerm === "" || title.includes(currentSearchTerm)){
+               visible = true;
+}
+
+if (visible === true) {
+     console.log(element.className + " visible")
+    attachResizeHandle(element);
+    if (interactionMode === INTERACTION_MODE_DRAG) {
+        enableDragForElement(element);
+    }
+    else {
+        enableSwapForElement(element);
+    }
+}
+else {
+     console.log(element.className + " hidden")
+     element.style.display = "none";
+}
+
+}
+
 // === Note builders ===
 
 //creates note
@@ -195,44 +241,18 @@ function createNote(backedItem, title, text, isNew) {
      textZone.value = text;
      note.appendChild(textZone);
 
-if (textZone.value.includes(currentSearchTerm) || noteTitle.value.includes(currentSearchTerm) || currentSearchTerm == "") { visible = true;} else { visible = false;}
+     if (textZone.value.includes(currentSearchTerm)) { visible = true;} else { visible = false;}
 
-if ((!isNew || isNew !== true) && interactionMode === INTERACTION_MODE_DRAG) {
-     note.style.left = backedItem.position.left;
-     note.style.top = backedItem.position.top;
-     note.style.position = "absolute";
-
-     if (backedItem.width) note.style.width = backedItem.width;
-     if (backedItem.height) note.style.height = backedItem.height;
-     if (backedItem.color) note.style.background = backedItem.color;
-}
-
-if (visible === true) {
-     console.log("note visible")
-    attachResizeHandle(note);
-    if (interactionMode === INTERACTION_MODE_DRAG) {
-        enableDragForElement(note);
-    }
-    else {
-        enableSwapForElement(note);
-    }
-}
-else {
-     console.log("note hidden")
-    note.style.display = "none";
-}
+     applyStoredStyles(title, isNew, interactionMode, note, backedItem, visible, currentSearchTerm);
 
      board.appendChild(note);
-//     if (isNew && isNew === true) saveBoardToStorage();
+
 }
 
 //creates checklist
 function createChecklist(backedItem, title, itemsArray, isNew) {
 
      let visible = false;
-     if (title.includes(currentSearchTerm) || currentSearchTerm === ""){
-               visible = true;
-     }
 
      const checklist = document.createElement("div");
      checklist.className = "note-list";
@@ -295,30 +315,8 @@ function createChecklist(backedItem, title, itemsArray, isNew) {
 
 }
 
-if ((!isNew || isNew !== true) && interactionMode === INTERACTION_MODE_DRAG) {
-     checklist.style.left = backedItem.position.left;
-     checklist.style.top = backedItem.position.top;
-     checklist.style.position = "absolute";
+     applyStoredStyles(title, isNew, interactionMode, checklist, backedItem, visible, currentSearchTerm);
 
-     if (backedItem.width) checklist.style.width = backedItem.width;
-     if (backedItem.height) checklist.style.height = backedItem.height;
-     if (backedItem.color) checklist.style.background = backedItem.color;
-}
-
-if (visible === true) {
-     console.log("checklist visible")
-    attachResizeHandle(checklist);
-    if (interactionMode === INTERACTION_MODE_DRAG) {
-        enableDragForElement(checklist);
-    }
-    else {
-        enableSwapForElement(checklist);
-    }
-}
-else {
-     console.log("checklist hidden")
-     checklist.style.display = "none";
-}
     board.appendChild(checklist);
 //    if (isNew && isNew === true) saveBoardToStorage();
 }
@@ -552,4 +550,25 @@ confirmSearchInput.addEventListener("click", () => {
 searchInput.addEventListener("input", () => {
      currentSearchTerm = searchInput.value;
      loadBoardFromStorage();
+});
+
+document.addEventListener("keydown", (e) => {
+  // Ignore if user is typing in an input/textarea
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") {
+    return;
+  }
+  
+  // Ctrl/Cmd + N = New Note
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault();
+    createNote(null, "Untitled", "New note", true);
+    saveBoardToStorage();
+  }
+  
+  // Ctrl/Cmd + L = New Checklist
+  if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+    e.preventDefault();
+    createChecklist(null, "Untitled", [], true);
+    saveBoardToStorage();
+  }
 });
