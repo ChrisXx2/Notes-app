@@ -100,10 +100,10 @@ function loadBoardFromStorage() {
 
      allItems.forEach(backedItem => {
           if (backedItem.type === 'note') {
-               createNote(backedItem.title, backedItem.content, true);
+               createNote(backedItem, backedItem.title, backedItem.content, false);
           } else
                if (backedItem.type === 'note-list') {
-                    createChecklist(backedItem.title, {items: backedItem.items}, true);
+                    createChecklist(backedItem, backedItem.title, {items: backedItem.items}, false);
                }
           })
 
@@ -178,7 +178,7 @@ function attachResizeHandle(element) {
 // === Note builders ===
 
 //creates note
-function createNote(title, text, save) {
+function createNote(backedItem, title, text, isNew) {
      let visible = false;
      const note = document.createElement("div");
      note.className = "note";
@@ -197,14 +197,14 @@ function createNote(title, text, save) {
 
 if (textZone.value.includes(currentSearchTerm) || noteTitle.value.includes(currentSearchTerm) || currentSearchTerm == "") { visible = true;} else { visible = false;}
 
-if (!save || save !== true) {
-     element.style.left = backedItem.position.left;
-     element.style.top = backedItem.position.top;
-     element.style.position = "absolute";
+if (!isNew || isNew !== true) {
+     note.style.left = backedItem.position.left;
+     note.style.top = backedItem.position.top;
+     note.style.position = "absolute";
 
-     if (backedItem.width) element.style.width = backedItem.width;
-     if (backedItem.height) element.style.height = backedItem.height;
-     if (backedItem.color) element.style.background = backedItem.color;
+     if (backedItem.width) note.style.width = backedItem.width;
+     if (backedItem.height) note.style.height = backedItem.height;
+     if (backedItem.color) note.style.background = backedItem.color;
 }
 
 if (visible === true) {
@@ -223,14 +223,14 @@ else {
 }
 
      board.appendChild(note);
-//     if (save && save === true) saveBoardToStorage();
+//     if (isNew && isNew === true) saveBoardToStorage();
 }
 
 //creates checklist
-function createChecklist(title, itemsArray, isSave) {
+function createChecklist(backedItem, title, itemsArray, isNew) {
 
      let visible = false;
-     if (title.value.includes(currentSearchTerm) || currentSearchTerm === ""){
+     if (title.includes(currentSearchTerm) || currentSearchTerm === ""){
                visible = true;
      }
 
@@ -295,14 +295,14 @@ function createChecklist(title, itemsArray, isSave) {
 
 }
 
-if (!isSave || isSave !== true) {
-     element.style.left = backedItem.position.left;
-     element.style.top = backedItem.position.top;
-     element.style.position = "absolute";
+if (!isNew || isNew !== true) {
+     checklist.style.left = backedItem.position.left;
+     checklist.style.top = backedItem.position.top;
+     checklist.style.position = "absolute";
 
-     if (backedItem.width) element.style.width = backedItem.width;
-     if (backedItem.height) element.style.height = backedItem.height;
-     if (backedItem.color) element.style.background = backedItem.color;
+     if (backedItem.width) checklist.style.width = backedItem.width;
+     if (backedItem.height) checklist.style.height = backedItem.height;
+     if (backedItem.color) checklist.style.background = backedItem.color;
 }
 
 if (visible === true) {
@@ -320,7 +320,7 @@ else {
      checklist.style.display = "none";
 }
     board.appendChild(checklist);
-//    if (isSave && isSave === true) saveBoardToStorage();
+//    if (isNew && isNew === true) saveBoardToStorage();
 }
 // === Drag and Drop Logic ===
 
@@ -483,13 +483,13 @@ toggleDragModeButton.addEventListener("click", () => {
 
 // Add Note Button
 addNoteButton.addEventListener("click", () => {
-     createNote("Untitled", "New note", true);
+     createNote(null, "Untitled", "New note", true);
      saveBoardToStorage();
 });
 
 // Add Checklist Button
 addChecklistButton.addEventListener("click", () => {
-     createChecklist("Untitled", [], true);
+     createChecklist(null, "Untitled", [], true);
      saveBoardToStorage();
 });
 toggleResizeButton.addEventListener("click", () => {
