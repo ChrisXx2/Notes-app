@@ -197,7 +197,7 @@ function createNote(backedItem, title, text, isNew) {
 
 if (textZone.value.includes(currentSearchTerm) || noteTitle.value.includes(currentSearchTerm) || currentSearchTerm == "") { visible = true;} else { visible = false;}
 
-if (!isNew || isNew !== true) {
+if ((!isNew || isNew !== true) && interactionMode === INTERACTION_MODE_DRAG) {
      note.style.left = backedItem.position.left;
      note.style.top = backedItem.position.top;
      note.style.position = "absolute";
@@ -295,7 +295,7 @@ function createChecklist(backedItem, title, itemsArray, isNew) {
 
 }
 
-if (!isNew || isNew !== true) {
+if ((!isNew || isNew !== true) && interactionMode === INTERACTION_MODE_DRAG) {
      checklist.style.left = backedItem.position.left;
      checklist.style.top = backedItem.position.top;
      checklist.style.position = "absolute";
