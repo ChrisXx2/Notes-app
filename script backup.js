@@ -1,4 +1,4 @@
-// Find me on Discord : chris.y.l.o
+// Find me on Discord : Chris.y.l.o
 // === Constants for Modes ===
 const DRAG_MODE_FREE = 1;
 const DRAG_MODE_GRID = 2;
@@ -6,6 +6,23 @@ const DRAG_MODE_SNAP_ON_RELEASE = 3;
 
 const INTERACTION_MODE_DRAG = 1;
 const INTERACTION_MODE_SWAP = 2;
+
+// Grid and Snap Settings
+const GRID_ROWS = 40;
+const GRID_COLS = 20;
+const SNAP_GRID_SIZE = 50;
+
+// Size Constraints
+const MIN_NOTE_WIDTH = 120;
+const MIN_NOTE_HEIGHT = 80;
+const MAX_NOTE_WIDTH = 600;
+const MAX_NOTE_HEIGHT = 500;
+
+// Debounce Timing
+const SAVE_DEBOUNCE_MS = 500;
+
+// Z-Index Management
+const DRAGGING_Z_INDEX_BOOST = 1000;
 
 // === DOM Elements ===
 const board = document.getElementById("board");
@@ -20,64 +37,66 @@ const searchInput = document.getElementById("search-bar");
 const confirmSearchInput = document.getElementById("search-button");
 
 // === State Variables ===
-let allowDragWhileEditing = true;
-let isDragging = false;
-let activeDraggedElement = null;
-let activeSwappedElement = null;
-
-let lastDraggedElement = null;
-let mouseOffsetX = 0;
-let mouseOffsetY = 0;
-
-let dragMode = DRAG_MODE_FREE;
-let interactionMode = INTERACTION_MODE_DRAG;
-
-// let settingsOpen = false;
-let resizeEnabled = true;
-
-const minWidth = 120;
-const minHeight = 80;
-const maxWidth = 600;
-const maxHeight = 500;
-
-// === Debounce Variables ===
-
-let saveTimeout;
-
-// === Search mode ===
-
-let currentSearchTerm = "";
+const appState = {
+  // Drag state
+  isDragging: false,
+  activeDraggedElement: null,
+  lastDraggedElement: null,
+  mouseOffsetX: 0,
+  mouseOffsetY: 0,
+  
+  // Swap state
+  activeSwappedElement: null,
+  
+  // Settings
+  dragMode: DRAG_MODE_FREE,
+  interactionMode: INTERACTION_MODE_DRAG,
+  resizeEnabled: true,
+  allowDragWhileEditing: true,
+  
+  // Search
+  currentSearchTerm: "",
+  
+  // Debounce
+  saveTimeout: null
+};
 
 // === Local Storage ===
 
 function saveBoardToStorage() {
   try {
-    const notes = Array.from(board.querySelectorAll('.note')).map(note => ({
+    const notes = Array.from(board.querySelectorAll('.note')).map((note, index) => ({
       type: "note",
       title: note.querySelector('.note-title')?.value || "Untitled",
       content: note.querySelector('.text-zone')?.value || "",
-      position: { left: note.style.left, top: note.style.top },
+      position: appState.interactionMode === INTERACTION_MODE_DRAG ? { left: note.style.left, top: note.style.top } : { left: "0px", top: "0px" },
       width: note.style.width,
       height: note.style.height,
       color: note.style.background || "#fffdf5",
       tag: note.querySelector('.tag')?.value || "none",
+      order: index // Save order for swap mode
     }));
 
-    const lists = Array.from(board.querySelectorAll('.note-list')).map(list => ({
+    const lists = Array.from(board.querySelectorAll('.note-list')).map((list, index) => ({
       type: "note-list",
       title: list.querySelector('.list-title')?.value || "Untitled",
       items: Array.from(list.querySelectorAll(".checklist-item")).map(item => ({
         text: item.querySelector(".list-item-input")?.value || "",
         checked: item.querySelector(".list-item-checkbox")?.checked || false
       })),
-      position: { left: list.style.left, top: list.style.top },
+      position: appState.interactionMode === INTERACTION_MODE_DRAG ? { left: list.style.left, top: list.style.top } : { left: "0px", top: "0px" },
       width: list.style.width,
       height: list.style.height,
       color: list.style.background || "#fffdf5",
-      tag: list.querySelector('.tag')?.value || "none"
+      tag: list.querySelector('.tag')?.value || "none",
+      order: notes.length + index // Save order for swap mode
     }));
 
     const allItems = [...notes, ...lists];
+    
+    // Sort by order to maintain swap mode arrangement
+    allItems.sort((a, b) => a.order - b.order);
+    
     localStorage.setItem("currentBoard", JSON.stringify(allItems));
     console.log("Board saved successfully");
   } catch (error) {
@@ -87,13 +106,11 @@ function saveBoardToStorage() {
 }
 
 function debounceSave() {
-
-     clearTimeout(saveTimeout)
-
-     saveTimeout = setTimeout (() => {
-
-          saveBoardToStorage();
-     }, 500);
+  clearTimeout(appState.saveTimeout);
+  
+  appState.saveTimeout = setTimeout(() => {
+    saveBoardToStorage();
+  }, SAVE_DEBOUNCE_MS);
 }
 
 function loadBoardFromStorage() {
@@ -114,444 +131,489 @@ function loadBoardFromStorage() {
   } catch (error) {
     console.error("Failed to load board from storage:", error);
     alert("Failed to load saved notes. Starting with a clean board.");
-    localStorage.removeItem("currentBoard")
+    localStorage.removeItem("currentBoard");
   }
 }
+
 window.addEventListener("DOMContentLoaded", loadBoardFromStorage);
 
-// === Complexe Buttons for the Notes ===
+// === Helper Functions for Element Setup ===
+
+function shouldBeVisible(searchableContent) {
+  if (appState.currentSearchTerm === "") return true;
+  
+  return searchableContent.some(content => 
+    content && content.toLowerCase().includes(appState.currentSearchTerm.toLowerCase())
+  );
+}
+
+function applyStoredStyles(element, backedItem, isNew) {
+  // Only apply saved styles if this is a loaded item (not new)
+  if (isNew || !backedItem) {
+    return;
+  }
+  
+  // Only apply positioning in drag mode
+  if (appState.interactionMode === INTERACTION_MODE_DRAG) {
+    element.style.position = "absolute";
+    element.style.left = backedItem.position.left;
+    element.style.top = backedItem.position.top;
+  }
+
+  if (backedItem.width) element.style.width = backedItem.width;
+  if (backedItem.height) element.style.height = backedItem.height;
+  if (backedItem.color) element.style.background = backedItem.color;
+}
+
+function finalizeElement(element, isVisible) {
+  if (isVisible) {
+    console.log(element.className + " visible");
+    attachResizeHandle(element);
+    
+    if (appState.interactionMode === INTERACTION_MODE_DRAG) {
+      enableDragForElement(element);
+    } else {
+      enableSwapForElement(element);
+    }
+  } else {
+    console.log(element.className + " hidden");
+    element.style.display = "none";
+  }
+  
+  board.appendChild(element);
+}
+
+// === Complex Buttons for the Notes ===
 
 function attachDeleteButton(element) {
-     const deleteButton = document.createElement("button");
-     deleteButton.className = "deleteButton";
-     deleteButton.textContent = "x";
-     deleteButton.onclick = () => {
-          element.remove();
-          saveBoardToStorage();
-     };
-     element.appendChild(deleteButton);
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "deleteButton";
+  deleteButton.textContent = "x";
+  deleteButton.setAttribute("aria-label", "Delete this note");
+  deleteButton.onclick = () => {
+    element.remove();
+    saveBoardToStorage();
+  };
+  element.appendChild(deleteButton);
 }
 
 function attachItemDeleteButton(element) {
-     const deleteButton = document.createElement("button");
-     deleteButton.className = "itemDeleteButton";
-     deleteButton.textContent = "x";
-     deleteButton.onclick = () => {
-          element.remove();
-          saveBoardToStorage();
-     };
-     element.appendChild(deleteButton);
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "itemDeleteButton";
+  deleteButton.textContent = "x";
+  deleteButton.setAttribute("aria-label", "Delete this item");
+  deleteButton.onclick = () => {
+    element.remove();
+    saveBoardToStorage();
+  };
+  element.appendChild(deleteButton);
 }
 
-// resizing logic
+// === Resizing Logic ===
 function attachResizeHandle(element) {
-     const resizeHandle = document.createElement("div");
-     resizeHandle.className = "resize-handle";
+  const resizeHandle = document.createElement("div");
+  resizeHandle.className = "resize-handle";
+  resizeHandle.setAttribute("aria-label", "Resize handle");
 
-     let x1;
-     let y1; 
-     let originalWidth;
-     let originalHeight;
+  let x1;
+  let y1; 
+  let originalWidth;
+  let originalHeight;
 
-     resizeHandle.addEventListener("mousedown", e => {
+  resizeHandle.addEventListener("mousedown", e => {
+    x1 = e.clientX;
+    y1 = e.clientY;
+    originalWidth = parseInt(window.getComputedStyle(element).width, 10);
+    originalHeight = parseInt(window.getComputedStyle(element).height, 10);
+    e.stopPropagation();
+    e.preventDefault();
+    document.addEventListener("mousemove", resizeElement);
+    document.addEventListener("mouseup", stopResize);
+  });
 
-          x1 = e.clientX;
-          y1 = e.clientY;
-          originalWidth = parseInt(window.getComputedStyle(element).width, 10);
-          originalHeight = parseInt(window.getComputedStyle(element).height, 10);
-          e.stopPropagation();
-          e.preventDefault();
-          document.addEventListener("mousemove", resizeElement);
-          document.addEventListener("mouseup", stopResize);
-     })
-
-     function resizeElement(e) {
-          const newWidth = originalWidth + (e.clientX - x1);
-          const newHeight = originalHeight + (e.clientY - y1);
-          if (newWidth >= minWidth && newWidth <= maxWidth && resizeEnabled === true) {
-               element.style.width = newWidth + "px";
-          }
-          if (newHeight >= minHeight && newHeight <= maxHeight && resizeEnabled === true && element.className !== "note-list") {
-               element.style.height = newHeight + "px";
-          }
-
-     }
-     function stopResize(e){
-          document.removeEventListener("mousemove", resizeElement);
-          document.removeEventListener("mouseup", stopResize);
-          saveBoardToStorage();
-     }
-
-     element.appendChild(resizeHandle);
-}
-
-//standard style rules for notes and checklists
-
-function applyStoredStyles(title, isNew, interactionMode, element, backedItem, visible, currentSearchTerm) {
-
-   if ((!isNew || isNew !== true) && interactionMode === INTERACTION_MODE_DRAG) {
-     element.style.left = backedItem.position.left;
-     element.style.top = backedItem.position.top;
-     element.style.position = "absolute";
-
-     if (backedItem.width) element.style.width = backedItem.width;
-     if (backedItem.height) element.style.height = backedItem.height;
-     if (backedItem.color) element.style.background = backedItem.color;
-}    else {
-         lastDraggedElement = element;
-}
-if (currentSearchTerm === "" || title.includes(currentSearchTerm)){
-               visible = true;
-}
-
-if (visible === true) {
-     console.log(element.className + " visible")
-    attachResizeHandle(element);
-    if (interactionMode === INTERACTION_MODE_DRAG) {
-        enableDragForElement(element);
+  function resizeElement(e) {
+    const newWidth = originalWidth + (e.clientX - x1);
+    const newHeight = originalHeight + (e.clientY - y1);
+    
+    if (newWidth >= MIN_NOTE_WIDTH && newWidth <= MAX_NOTE_WIDTH && appState.resizeEnabled) {
+      element.style.width = newWidth + "px";
     }
-    else {
-        enableSwapForElement(element);
+    if (newHeight >= MIN_NOTE_HEIGHT && newHeight <= MAX_NOTE_HEIGHT && appState.resizeEnabled && element.className !== "note-list") {
+      element.style.height = newHeight + "px";
     }
-}
-else {
-     console.log(element.className + " hidden")
-     element.style.display = "none";
+  }
+  
+  function stopResize() {
+    document.removeEventListener("mousemove", resizeElement);
+    document.removeEventListener("mouseup", stopResize);
+    saveBoardToStorage();
+  }
+
+  element.appendChild(resizeHandle);
 }
 
-}
+// === Note Builders ===
 
-// === Note builders ===
-
-//creates note
 function createNote(backedItem, title, text, isNew) {
-     let visible = false;
-     const note = document.createElement("div");
-     note.className = "note";
+  const note = document.createElement("div");
+  note.className = "note";
 
-     attachDeleteButton(note);
+  attachDeleteButton(note);
 
-     const noteTitle = document.createElement("textarea");
-     noteTitle.className = "note-title";
-     noteTitle.value = title;
-     note.appendChild(noteTitle);
+  const noteTitle = document.createElement("textarea");
+  noteTitle.className = "note-title";
+  noteTitle.value = title;
+  noteTitle.setAttribute("aria-label", "Note title");
+  note.appendChild(noteTitle);
 
-     const textZone = document.createElement("textarea");
-     textZone.className = "text-zone";
-     textZone.value = text;
-     note.appendChild(textZone);
+  const textZone = document.createElement("textarea");
+  textZone.className = "text-zone";
+  textZone.value = text;
+  textZone.setAttribute("aria-label", "Note content");
+  note.appendChild(textZone);
 
-     if (textZone.value.includes(currentSearchTerm)) { visible = true;} else { visible = false;}
+  // Check visibility based on search
+  const searchableContent = [title, text];
+  const visible = shouldBeVisible(searchableContent);
 
-     applyStoredStyles(title, isNew, interactionMode, note, backedItem, visible, currentSearchTerm);
+  // Apply saved styles if loading from storage
+  applyStoredStyles(note, backedItem, isNew);
 
-     board.appendChild(note);
-
+  // Finalize and add to board
+  finalizeElement(note, visible);
+  
+  // Auto-focus and select title for new notes
+  if (isNew) {
+    noteTitle.focus();
+    noteTitle.select();
+  }
 }
 
-//creates checklist
 function createChecklist(backedItem, title, itemsArray, isNew) {
+  const checklist = document.createElement("div");
+  checklist.className = "note-list";
 
-     let visible = false;
+  attachDeleteButton(checklist);
 
-     const checklist = document.createElement("div");
-     checklist.className = "note-list";
+  const listTitle = document.createElement("textarea");
+  listTitle.className = "list-title";
+  listTitle.value = title;
+  listTitle.setAttribute("aria-label", "Checklist title");
+  checklist.appendChild(listTitle);
 
-    attachDeleteButton(checklist);
+  const addItemButton = document.createElement("button");
+  addItemButton.className = "add-item-button";
+  addItemButton.textContent = "Add item";
+  addItemButton.setAttribute("aria-label", "Add new checklist item");
 
-    const listTitle = document.createElement("textarea");
-    listTitle.className = "list-title";
-    listTitle.value = title;
-    checklist.appendChild(listTitle);
+  addItemButton.addEventListener("click", () => {
+    const item = document.createElement("div");
+    item.className = "checklist-item";
+    
+    const checkBox = document.createElement("input");
+    checkBox.className = "list-item-checkbox";
+    checkBox.type = "checkbox";
+    checkBox.setAttribute("aria-label", "Mark item as complete");
 
-    const addItemButton = document.createElement("button");
-    addItemButton.className = "add-item-button";
-    addItemButton.textContent = "Add item";
+    const input = document.createElement("input");
+    input.className = "list-item-input";
+    input.value = "New item";
+    input.setAttribute("aria-label", "Checklist item text");
 
-    addItemButton.addEventListener("click", () => {
-               const item = document.createElement("div");
-               item.className = "checklist-item";
-               const checkBox = document.createElement("input");
-               checkBox.className = "list-item-checkbox";
-               checkBox.type = "checkbox";
+    attachItemDeleteButton(item);
 
-               const input = document.createElement("input");
-               input.className = "list-item-input";
-               input.value = "New item";
+    item.appendChild(checkBox);
+    item.appendChild(input);
+    checklist.appendChild(item);
+    saveBoardToStorage();
+  });
 
-               attachItemDeleteButton(item);
+  checklist.appendChild(addItemButton);
 
-               item.appendChild(checkBox);
-               item.appendChild(input);
-               checklist.appendChild(item);
-               saveBoardToStorage();
+  // Build searchable content array
+  let searchableContent = [title];
+
+  // Add existing items if they exist
+  if (itemsArray && itemsArray.items) {
+    itemsArray.items.forEach(backedInput => {
+      searchableContent.push(backedInput.text);
+      
+      const item = document.createElement("div");
+      item.className = "checklist-item";
+      
+      const checkBox = document.createElement("input");
+      checkBox.className = "list-item-checkbox";
+      checkBox.type = "checkbox";
+      checkBox.checked = backedInput.checked;
+      checkBox.setAttribute("aria-label", "Mark item as complete");
+
+      const input = document.createElement("input");
+      input.className = "list-item-input";
+      input.value = backedInput.text;
+      input.setAttribute("aria-label", "Checklist item text");
+
+      attachItemDeleteButton(item);
+      item.appendChild(checkBox);
+      item.appendChild(input);
+      checklist.appendChild(item);
     });
+  }
 
-    checklist.appendChild(addItemButton);
+  // Check visibility
+  const visible = shouldBeVisible(searchableContent);
 
-    if (typeof itemsArray === "undefined" || !itemsArray.items) {
-          console.log("no items found in checklist")
+  // Apply saved styles if loading from storage
+  applyStoredStyles(checklist, backedItem, isNew);
 
-     } else {
-          itemsArray.items.forEach(backedInput => {
-          if (backedInput.text.includes(currentSearchTerm)){
-               visible = true;
-          }
-          const item = document.createElement("div");
-          const checkBox = document.createElement("input");
-          checkBox.className = "list-item-checkbox";
-          checkBox.type = "checkbox";
-          checkBox.checked = backedInput.checked;
-                                             
-          const input = document.createElement("input");
-          input.className = "list-item-input";
-          input.value = backedInput.text;
-
-          attachItemDeleteButton(item);
-          item.appendChild(checkBox);
-          item.appendChild(input);
-          checklist.appendChild(item);
-    });
-
+  // Finalize and add to board
+  finalizeElement(checklist, visible);
+  
+  // Auto-focus and select title for new checklists
+  if (isNew) {
+    listTitle.focus();
+    listTitle.select();
+  }
 }
 
-     applyStoredStyles(title, isNew, interactionMode, checklist, backedItem, visible, currentSearchTerm);
-
-    board.appendChild(checklist);
-//    if (isNew && isNew === true) saveBoardToStorage();
-}
 // === Drag and Drop Logic ===
 
-// === Dragging Logic ===
 function enableDragForElement(element) {
-     element.style.cursor = "grab";
-     
-     
-     element.addEventListener("mousedown", e => {
-          if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") && allowDragWhileEditing) {
-               return;
-          }
-          e.preventDefault();
+  element.style.cursor = "grab";
+  
+  element.addEventListener("mousedown", e => {
+    if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") && appState.allowDragWhileEditing) {
+      return;
+    }
+    e.preventDefault();
 
-          element.style.position = "absolute";
-          document.body.style.userSelect = "none";
+    element.style.position = "absolute";
+    document.body.style.userSelect = "none";
 
-          isDragging = true;
-          activeDraggedElement = element;
+    appState.isDragging = true;
+    appState.activeDraggedElement = element;
 
-          // Raise z-index so dragged item stays on top
-          activeDraggedElement.style.zIndex = (parseInt(element.style.zIndex, 10) || 0) + 1000;
+    // Raise z-index so dragged item stays on top
+    appState.activeDraggedElement.style.zIndex = (parseInt(element.style.zIndex, 10) || 0) + DRAGGING_Z_INDEX_BOOST;
 
-          mouseOffsetX = e.clientX - element.offsetLeft;
-          mouseOffsetY = e.clientY - element.offsetTop;
-          element.style.cursor = "grabbing";
+    appState.mouseOffsetX = e.clientX - element.offsetLeft;
+    appState.mouseOffsetY = e.clientY - element.offsetTop;
+    element.style.cursor = "grabbing";
 
-          document.addEventListener("mousemove", onMouseMove);
-          document.addEventListener("mouseup", onMouseUp);
-     });
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  });
 
-     function onMouseMove(e) {
-          if (isDragging && activeDraggedElement) {
-               const boardRect = board.getBoundingClientRect();
-               const elemRect = activeDraggedElement.getBoundingClientRect();
+  function onMouseMove(e) {
+    if (appState.isDragging && appState.activeDraggedElement) {
+      const boardRect = board.getBoundingClientRect();
+      const elemRect = appState.activeDraggedElement.getBoundingClientRect();
 
-               let newLeft = e.clientX - mouseOffsetX;
-               let newTop = e.clientY - mouseOffsetY;
+      let newLeft = e.clientX - appState.mouseOffsetX;
+      let newTop = e.clientY - appState.mouseOffsetY;
 
-               // Keep inside board horizontally
-               if (newLeft < 0) newLeft = 0;
-               if (newLeft + elemRect.width > boardRect.width) {
-                    newLeft = boardRect.width - elemRect.width;
-               }
-               // Keep inside board vertically
-               if (newTop < 0) newTop = 0;
-               if (newTop + elemRect.height > boardRect.height) {
-                    newTop = boardRect.height - elemRect.height;
-               }
+      // Keep inside board horizontally
+      if (newLeft < 0) newLeft = 0;
+      if (newLeft + elemRect.width > boardRect.width) {
+        newLeft = boardRect.width - elemRect.width;
+      }
+      // Keep inside board vertically
+      if (newTop < 0) newTop = 0;
+      if (newTop + elemRect.height > boardRect.height) {
+        newTop = boardRect.height - elemRect.height;
+      }
 
-               // snappy drag vs free drag
-               if (dragMode === DRAG_MODE_GRID) {
-                    const gridSizeHeight = board.offsetHeight / 40;
-                    const gridSizeWidth = board.offsetWidth / 20;
-                    activeDraggedElement.style.left =
-                         Math.round((newLeft) / gridSizeWidth) * gridSizeWidth + "px";
-                    activeDraggedElement.style.top =
-                         Math.round((newTop) / gridSizeHeight) * gridSizeHeight + "px";
-               } else {
-                    activeDraggedElement.style.left = newLeft + "px";
-                    activeDraggedElement.style.top = newTop + "px";
-               }
-          }
-     }
+      // Snappy drag vs free drag
+      if (appState.dragMode === DRAG_MODE_GRID) {
+        const gridSizeHeight = board.offsetHeight / GRID_ROWS;
+        const gridSizeWidth = board.offsetWidth / GRID_COLS;
+        appState.activeDraggedElement.style.left =
+          Math.round(newLeft / gridSizeWidth) * gridSizeWidth + "px";
+        appState.activeDraggedElement.style.top =
+          Math.round(newTop / gridSizeHeight) * gridSizeHeight + "px";
+      } else {
+        appState.activeDraggedElement.style.left = newLeft + "px";
+        appState.activeDraggedElement.style.top = newTop + "px";
+      }
+    }
+  }
 
-     function onMouseUp() {
-          if (activeDraggedElement && dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
-               const gridSize = 50;
-               const boardRect = board.getBoundingClientRect();
+  function onMouseUp() {
+    if (appState.activeDraggedElement && appState.dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
+      const boardRect = board.getBoundingClientRect();
 
-               let absLeft = parseInt(activeDraggedElement.style.left, 10);
-               let absTop = parseInt(activeDraggedElement.style.top, 10);
+      let absLeft = parseInt(appState.activeDraggedElement.style.left, 10);
+      let absTop = parseInt(appState.activeDraggedElement.style.top, 10);
 
-               let relLeft = absLeft - boardRect.left;
-               let relTop = absTop - boardRect.top;
+      let relLeft = absLeft - boardRect.left;
+      let relTop = absTop - boardRect.top;
 
-               relLeft = Math.round(relLeft / gridSize) * gridSize;
-               relTop = Math.round(relTop / gridSize) * gridSize;
+      relLeft = Math.round(relLeft / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+      relTop = Math.round(relTop / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
 
-               relLeft = Math.max(0, Math.min(relLeft, boardRect.width - activeDraggedElement.offsetWidth));
-               relTop = Math.max(0, Math.min(relTop, boardRect.height - activeDraggedElement.offsetHeight));
+      relLeft = Math.max(0, Math.min(relLeft, boardRect.width - appState.activeDraggedElement.offsetWidth));
+      relTop = Math.max(0, Math.min(relTop, boardRect.height - appState.activeDraggedElement.offsetHeight));
 
-               activeDraggedElement.style.left = boardRect.left + relLeft + "px";
-               activeDraggedElement.style.top = boardRect.top + relTop + "px";
-               activeDraggedElement.style.cursor = "grab";
-          }
+      appState.activeDraggedElement.style.left = boardRect.left + relLeft + "px";
+      appState.activeDraggedElement.style.top = boardRect.top + relTop + "px";
+      appState.activeDraggedElement.style.cursor = "grab";
+    }
 
-          document.body.style.userSelect = "auto";
-          isDragging = false;
-          lastDraggedElement = activeDraggedElement;
-          activeDraggedElement = null;
+    document.body.style.userSelect = "auto";
+    appState.isDragging = false;
+    appState.lastDraggedElement = appState.activeDraggedElement;
+    appState.activeDraggedElement = null;
 
-          document.removeEventListener("mousemove", onMouseMove);
-          document.removeEventListener("mouseup", onMouseUp);
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
 
-          saveBoardToStorage();
-     }
+    saveBoardToStorage();
+  }
 }
 
 // === Swapping Logic ===
 function enableSwapForElement(element) {
-     element.style.cursor = "grab";
+  element.style.cursor = "grab";
 
-     element.addEventListener("mousedown", e => {
-          if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && allowDragWhileEditing) {
-               return;
-          }
-          e.preventDefault();
-          activeSwappedElement = element;
-          element.style.opacity = "0.5";
-          document.body.style.userSelect = "none";
+  element.addEventListener("mousedown", e => {
+    if ((e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") && appState.allowDragWhileEditing) {
+      return;
+    }
+    e.preventDefault();
+    appState.activeSwappedElement = element;
+    element.style.opacity = "0.5";
+    document.body.style.userSelect = "none";
 
-          function onMouseMove(e) {
-               const overElement = document.elementFromPoint(e.clientX, e.clientY);
-               if (!overElement) return;
+    function onMouseMove(e) {
+      const overElement = document.elementFromPoint(e.clientX, e.clientY);
+      if (!overElement) return;
 
-               const overNote = overElement.closest(".note");
-               const overList = overElement.closest(".note-list");
-               const overTarget = overNote || overList;
+      const overNote = overElement.closest(".note");
+      const overList = overElement.closest(".note-list");
+      const overTarget = overNote || overList;
 
-               if (overTarget && overTarget !== activeSwappedElement) {
-                    const draggedIndex = Array.from(board.children).indexOf(activeSwappedElement);
-                    const overIndex = Array.from(board.children).indexOf(overTarget);
+      if (overTarget && overTarget !== appState.activeSwappedElement) {
+        const draggedIndex = Array.from(board.children).indexOf(appState.activeSwappedElement);
+        const overIndex = Array.from(board.children).indexOf(overTarget);
 
-                    if (draggedIndex < overIndex) {
-                         board.insertBefore(activeSwappedElement, overTarget.nextSibling);
-                    } else {
-                         board.insertBefore(activeSwappedElement, overTarget);
-                    }
-               }
-          }
+        if (draggedIndex < overIndex) {
+          board.insertBefore(appState.activeSwappedElement, overTarget.nextSibling);
+        } else {
+          board.insertBefore(appState.activeSwappedElement, overTarget);
+        }
+      }
+    }
 
-          function onMouseUp() {
-               activeSwappedElement.style.opacity = "1";
-               activeSwappedElement = null;
-               document.body.style.userSelect = "auto";
-               document.removeEventListener("mousemove", onMouseMove);
-               document.removeEventListener("mouseup", onMouseUp);
-               saveBoardToStorage();
-          }
+    function onMouseUp() {
+      appState.activeSwappedElement.style.opacity = "1";
+      appState.lastDraggedElement = appState.activeSwappedElement;
+      appState.activeSwappedElement = null;
+      document.body.style.userSelect = "auto";
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      saveBoardToStorage();
+    }
 
-          document.addEventListener("mousemove", onMouseMove);
-          document.addEventListener("mouseup", onMouseUp);
-     });
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  });
 }
 
 // === Action Buttons ===
 toggleDragModeButton.addEventListener("click", () => {
-     if (dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
-          dragMode = DRAG_MODE_FREE;
-          toggleDragModeButton.textContent = "Drag mode: free drag, no snap";
-     } else if (dragMode === DRAG_MODE_FREE) {
-          dragMode = DRAG_MODE_GRID;
-          toggleDragModeButton.textContent = "Drag mode: drag across grid";
-     } else if (dragMode === DRAG_MODE_GRID) {
-          dragMode = DRAG_MODE_SNAP_ON_RELEASE;
-          toggleDragModeButton.textContent = "Drag mode: free drag, snap on release";
-     }
+  if (appState.dragMode === DRAG_MODE_SNAP_ON_RELEASE) {
+    appState.dragMode = DRAG_MODE_FREE;
+    toggleDragModeButton.textContent = "Drag mode: free drag, no snap";
+  } else if (appState.dragMode === DRAG_MODE_FREE) {
+    appState.dragMode = DRAG_MODE_GRID;
+    toggleDragModeButton.textContent = "Drag mode: drag across grid";
+  } else if (appState.dragMode === DRAG_MODE_GRID) {
+    appState.dragMode = DRAG_MODE_SNAP_ON_RELEASE;
+    toggleDragModeButton.textContent = "Drag mode: free drag, snap on release";
+  }
 });
 
 // Add Note Button
 addNoteButton.addEventListener("click", () => {
-     createNote(null, "Untitled", "New note", true);
-     saveBoardToStorage();
+  createNote(null, "Untitled", "New note", true);
+  saveBoardToStorage();
 });
 
 // Add Checklist Button
 addChecklistButton.addEventListener("click", () => {
-     createChecklist(null, "Untitled", [], true);
-     saveBoardToStorage();
+  createChecklist(null, "Untitled", [], true);
+  saveBoardToStorage();
 });
+
 toggleResizeButton.addEventListener("click", () => {
-     if (resizeEnabled === true){
-          resizeEnabled = false;
-          toggleResizeButton.textContent = "resize notes: off";
-          saveBoardToStorage();
-     } else {
-          resizeEnabled = true;
-          toggleResizeButton.textContent = "resize notes: on";
-          saveBoardToStorage();
-     }
-})
+  appState.resizeEnabled = !appState.resizeEnabled;
+  toggleResizeButton.textContent = `resize notes: ${appState.resizeEnabled ? 'on' : 'off'}`;
+  saveBoardToStorage();
+});
 
 confirmColorButton.addEventListener("click", () => {
-
-     if (lastDraggedElement) {
-          console.log("note found")
-          lastDraggedElement.style.background = colorInput.value;
-          saveBoardToStorage();
-     } else {
-          console.log("No note previously selected");
-     }
-
-})
+  if (appState.lastDraggedElement) {
+    console.log("note found");
+    appState.lastDraggedElement.style.background = colorInput.value;
+    saveBoardToStorage();
+  } else {
+    console.log("No note previously selected");
+  }
+});
 
 // Saves after the user types or checks a box
-
 document.addEventListener("input", e => {
-     if (e.target.matches(".note-title, .list-title, .text-zone, .list-item-input")) {
-          debounceSave();
-     }
+  if (e.target.matches(".note-title, .list-title, .text-zone, .list-item-input")) {
+    debounceSave();
+  }
 });
+
 document.addEventListener("change", e => {
-     if (e.target.matches(".list-item-checkbox")) {
-          debounceSave();
-     }
+  if (e.target.matches(".list-item-checkbox")) {
+    debounceSave();
+  }
 });
 
 // Swap Mode Button
 toggleInteractionModeButton.addEventListener("click", () => {
-     saveBoardToStorage();
-     board.innerHTML = "";
-     if (interactionMode === INTERACTION_MODE_DRAG) {
-          interactionMode = INTERACTION_MODE_SWAP;
-          toggleInteractionModeButton.textContent = "Mode: swap";
-          loadBoardFromStorage();
-     } else {
-          interactionMode = INTERACTION_MODE_DRAG;
-          toggleInteractionModeButton.textContent = "Mode: drag";
-          loadBoardFromStorage();
-     }
+  saveBoardToStorage();
+  board.innerHTML = "";
+  if (appState.interactionMode === INTERACTION_MODE_DRAG) {
+    appState.interactionMode = INTERACTION_MODE_SWAP;
+    toggleInteractionModeButton.textContent = "Mode: swap";
+  } else {
+    appState.interactionMode = INTERACTION_MODE_DRAG;
+    toggleInteractionModeButton.textContent = "Mode: drag";
+  }
+  loadBoardFromStorage();
 });
 
 confirmSearchInput.addEventListener("click", () => {
-     currentSearchTerm = searchInput.value;
-     loadBoardFromStorage();
-})
-
-searchInput.addEventListener("input", () => {
-     currentSearchTerm = searchInput.value;
-     loadBoardFromStorage();
+  appState.currentSearchTerm = searchInput.value;
+  loadBoardFromStorage();
 });
 
+searchInput.addEventListener("input", () => {
+  appState.currentSearchTerm = searchInput.value;
+  loadBoardFromStorage();
+});
+
+const clearBoardButton = document.getElementById("clear-board");
+if (clearBoardButton) {
+  clearBoardButton.addEventListener("click", () => {
+    const confirmDelete = confirm(
+      "Are you sure you want to delete all notes and checklists? This cannot be undone."
+    );
+    
+    if (confirmDelete) {
+      board.innerHTML = "";
+      localStorage.removeItem("currentBoard");
+      appState.lastDraggedElement = null;
+      console.log("All notes deleted successfully");
+    }
+  });
+}
+
+// Keyboard shortcuts
 document.addEventListener("keydown", (e) => {
   // Ignore if user is typing in an input/textarea
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") {
