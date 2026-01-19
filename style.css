@@ -324,6 +324,36 @@ button:focus {
 .drag-handle:active {
   cursor: grabbing;
 }
+/* File input styling */
+.file-input-wrapper {
+  display: inline-block;
+  position: relative;
+}
+
+.file-input-label {
+  margin: var(--spacing-xs);
+  padding: var(--button-padding);
+  border: none;
+  background: var(--primary-blue);
+  color: var(--white);
+  font-size: 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.file-input-label:hover {
+  background: var(--primary-blue-hover);
+}
+
+.file-input-label:focus {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+}
+
+.file-input-wrapper input[type="file"] {
+  display: none;
+}
 
 /* Resize handle */
 .resize-handle {

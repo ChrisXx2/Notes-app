@@ -1,6 +1,6 @@
 // alternate universe... for now (o)_(0)
 // this is just a draft place
-//actual draft is the chaos in my notebook rn ;-v(
+//actual draft is the chaos in my notebook rn :-^(
 
 // Right now I'll be trying to improve the note and list creation scripts
 

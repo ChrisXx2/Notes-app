@@ -1,4 +1,5 @@
 // Find me on Discord : chris.y.l.o
+
 // === Constants for Modes ===
 const DRAG_MODE_FREE = 1;
 const DRAG_MODE_GRID = 2;
@@ -28,6 +29,7 @@ const DRAGGING_Z_INDEX_BOOST = 1000;
 const board = document.getElementById("board");
 const addNoteButton = document.getElementById("add-note");
 const addChecklistButton = document.getElementById("add-checklist");
+const addImageButton = document.getElementById("add-image");
 const toggleDragModeButton = document.getElementById("toggle-snap");
 const toggleInteractionModeButton = document.getElementById("card-swap-mode");
 const toggleResizeButton = document.getElementById("toggle-resize");
@@ -92,10 +94,21 @@ function saveBoardToStorage() {
       order: notes.length + index // Save order for swap mode
     }));
 
-    const allItems = [...notes, ...lists];
+    const images = Array.from(board.querySelectorAll('.note-image')).map((imageNote, index) => ({
+      type: "note-image",
+      imageUrl: imageNote.style.backgroundImage || "",
+      position: { left: imageNote.style.left, top: imageNote.style.top },
+      width: imageNote.style.width,
+      height: imageNote.style.height,
+      order: notes.length + lists.length + index // Save order for swap mode
+    }));
+
+    localStorage.setItem('Images', images);
+
+    const allItems = [...notes, ...lists, ...images];
     
-    // Sort by order to maintain swap mode arrangement
     allItems.sort((a, b) => a.order - b.order);
+    
     
     localStorage.setItem("currentBoard", JSON.stringify(allItems));
     console.log("Board saved successfully");
@@ -116,6 +129,7 @@ function debounceSave() {
 function loadBoardFromStorage() {
   try {
     const savedNotes = localStorage.getItem("currentBoard");
+    const savedImages = localStorage.getItem("Images");
     if (!savedNotes) return;
     
     const allItems = JSON.parse(savedNotes);
@@ -126,8 +140,17 @@ function loadBoardFromStorage() {
         createNote(backedItem, backedItem.title, backedItem.content, false);
       } else if (backedItem.type === 'note-list') {
         createChecklist(backedItem, backedItem.title, {items: backedItem.items}, false);
+      }/* else if (backedItem.type === 'note-image') {
+        createImage(backedItem, false);
+      }
+        */
+    });
+    savedImages.forEach(backedItem => {
+      if (backedItem.type === 'note-image') {
+        createImage(backedItem, false);
       }
     });
+    
   } catch (error) {
     console.error("Failed to load board from storage:", error);
     alert("Failed to load saved notes. Starting with a clean board.");
@@ -375,6 +398,39 @@ function createChecklist(backedItem, title, itemsArray, isNew) {
   }
 }
 
+function createImage(backedItem, isNew) {
+  const imageNote = document.createElement("div");
+  imageNote.className = "note-image";
+  attachDeleteButton(imageNote);
+  if (isNew) {
+    const file = addImageButton.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imageUrl = e.target.result;
+            imageNote.style.backgroundImage = `url(${imageUrl})`;
+
+            // Save the image URL to localStorage
+            localStorage.setItem('backgroundImage', imageUrl);
+        };
+        reader.readAsDataURL(file);
+    }
+    imageNote.style.width = "200px";
+    imageNote.style.height = "200px";
+  } else if (backedItem && backedItem.imageUrl) {
+    imageNote.style.backgroundImage = backedItem.imageUrl;
+    console.log("Loaded image with URL:", backedItem.imageUrl);
+  } else {
+        imageNote.style.backgroundImage = `url('https://via.placeholder.com/200')`;
+        console.log("No image file selected, using placeholder.");
+    }
+
+  applyStoredStyles(imageNote, backedItem, isNew);
+
+  finalizeElement(imageNote, true);
+  console.log("Image note created");
+  console.log(imageNote.style.backgroundImage);
+}
 // === Drag and Drop Logic ===
 
 function enableDragForElement(element) {
@@ -541,6 +597,12 @@ addNoteButton.addEventListener("click", () => {
 // Add Checklist Button
 addChecklistButton.addEventListener("click", () => {
   createChecklist(null, "Untitled", [], true);
+  saveBoardToStorage();
+});
+
+// Add Image Button
+addImageButton.addEventListener("change", () => {
+  createImage(null, true);
   saveBoardToStorage();
 });
 
